@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Schedule · Sports Fiesta</title>
+
+        <style>
+            body {
+                font-family: sans-serif;
+                padding: 2rem;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+            }
+            th,
+            td {
+                border: 1px solid #ccc;
+                padding: 6px 8px;
+            }
+            th {
+                background: #f3f3f3;
+            }
+        </style>
+    </head>
+
+    <body>
+        <h1>Schedule</h1>
+        <p><a href="index.html">← back to home</a></p>
+
+        <table id="sched">
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Team A</th>
+                    <th>Team B</th>
+                    <th>Time</th>
+                    <th>Venue</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- rows will be inserted here -->
+            </tbody>
+        </table>
+
+        <script src="js/firebase-init.js" type="module"></script>
+        <script src="js/schedule.js" type="module"></script>
+    </body>
+</html>
