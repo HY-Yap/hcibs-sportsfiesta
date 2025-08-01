@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "hcibs-sportsfiesta"
-  }
+    "default": "hcibs-sportsfiesta",
+    "staging": "hcibs-sportsfiesta"
+  },
+  "targets": {},
+  "etags": {}
 }
