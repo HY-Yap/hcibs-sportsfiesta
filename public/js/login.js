@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDYSel3WBMz0bJEnYIpyAlefHXa-UdEE7Y",
@@ -25,7 +25,7 @@ loginBtn.addEventListener("click", async () => {
 
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    window.location.href = "/schedule"; // placeholder
+    window.location.href = "/login.html"; // placeholder
   } catch (err) {
     let message = "Login failed. Please try again.";
     switch (err.code) {
@@ -44,5 +44,50 @@ loginBtn.addEventListener("click", async () => {
     }
     errorMsg.innerText = message;
     errorMsg.classList.remove("hidden");
+  }
+});
+
+function logoutUser() {
+  signOut(auth)
+    .then(() => {
+      window.location.href = "/login.html";
+    })
+    .catch((error) => {
+      console.error("Error signing out:", error);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      logoutUser();
+    });
+  }
+});
+
+onAuthStateChanged(auth, (user) => {
+  const btnDesktop = document.getElementById('login-menu-btn-desktop');
+  const btnMobile = document.getElementById('login-menu-btn-mobile');
+
+  if (user) {
+    if (btnDesktop) {
+      btnDesktop.textContent = 'My Dashboard';
+      btnDesktop.href = '/dashboard.html';
+    }
+    if (btnMobile) {
+      btnMobile.textContent = 'My Dashboard';
+      btnMobile.href = '/dashboard.html';
+    }
+  } else {
+    if (btnDesktop) {
+      btnDesktop.textContent = 'Login';
+      btnDesktop.href = '/login.html';
+    }
+    if (btnMobile) {
+      btnMobile.textContent = 'Login';
+      btnMobile.href = '/login.html';
+    }
   }
 });
