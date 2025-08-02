@@ -2,6 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Schedule · Sports Fiesta</title>
 
         <style>
@@ -22,9 +23,32 @@
                 background: #f3f3f3;
             }
         </style>
+        <script src="https://cdn.tailwindcss.com"></script>
     </head>
 
     <body>
+        <nav class="bg-blue-800 text-white px-4 py-3 w-full">
+            <div class="flex justify-between items-center max-w-screen-2xl mx-auto">
+            <div class="text-lg font-semibold">SPORTS FIESTA</div> <!--placeholder for actl logo-->
+            <button class="md:hidden hover:text-lime-300" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+                ☰
+            </button>
+            <ul class="hidden md:flex space-x-4">
+                <li><a href="index.html" class="hover:text-lime-300">Home</a></li>
+                <li><a href="schedule.html" class="hover:text-lime-300">Schedules</a></li>
+                <li><a href="awards.html" class="hover:text-lime-300">Awards</a></li>
+                <li><a href="login.html" id="login-menu-btn" class="hover:text-lime-300">Login</a></li>
+                <li><a href="login.html" id="logout-btn" class="hover:text-lime-300">Logout</a></li>
+            </ul>
+            </div>
+            <ul id="mobile-menu" class="md:hidden hidden mt-2 flex flex-col space-y-2">
+            <li><a href="index.html" class="hover:text-lime-300">Home</a></li>
+            <li><a href="schedule.html" class="hover:text-lime-300">Schedules</a></li>
+            <li><a href="awards.html" class="hover:text-lime-300">Awards</a></li>
+            <li><a href="login.html" id="login-menu-btn" class="hover:text-lime-300">Login</a></li>
+            <li><a href="login.html" id="logout-btn" class="hover:text-lime-300">Logout</a></li>
+            </ul>
+        </nav>
         <h1>Schedule</h1>
         <p><a href="index.html">← back to home</a></p>
 
