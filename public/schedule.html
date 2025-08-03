@@ -1,73 +1,38 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Schedule · Sports Fiesta</title>
-
-        <style>
-            body {
-                font-family: sans-serif;
-                padding: 2rem;
-            }
-            table {
-                border-collapse: collapse;
-                width: 100%;
-            }
-            th,
-            td {
-                border: 1px solid #ccc;
-                padding: 6px 8px;
-            }
-            th {
-                background: #f3f3f3;
-            }
-        </style>
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
+    <body class="min-h-screen">
+        <!-- Injected nav -->
+        <div id="nav-placeholder"></div>
 
-    <body>
-        <nav class="bg-blue-800 text-white px-4 py-3 w-full">
-            <div class="flex justify-between items-center max-w-screen-2xl mx-auto">
-            <div class="text-lg font-semibold">SPORTS FIESTA</div> <!--placeholder for actl logo-->
-            <button class="md:hidden hover:text-lime-300" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
-                ☰
-            </button>
-            <ul class="hidden md:flex space-x-4">
-                <li><a href="index.html" class="hover:text-lime-300">Home</a></li>
-                <li><a href="schedule.html" class="hover:text-lime-300">Schedules</a></li>
-                <li><a href="awards.html" class="hover:text-lime-300">Awards</a></li>
-                <li><a href="login.html" id="login-menu-btn" class="hover:text-lime-300">Login</a></li>
-                <li><a href="login.html" id="logout-btn" class="hover:text-lime-300">Logout</a></li>
-            </ul>
-            </div>
-            <ul id="mobile-menu" class="md:hidden hidden mt-2 flex flex-col space-y-2">
-            <li><a href="index.html" class="hover:text-lime-300">Home</a></li>
-            <li><a href="schedule.html" class="hover:text-lime-300">Schedules</a></li>
-            <li><a href="awards.html" class="hover:text-lime-300">Awards</a></li>
-            <li><a href="login.html" id="login-menu-btn" class="hover:text-lime-300">Login</a></li>
-            <li><a href="login.html" id="logout-btn" class="hover:text-lime-300">Logout</a></li>
-            </ul>
-        </nav>
-        <h1>Schedule</h1>
-        <p><a href="index.html">← back to home</a></p>
+        <!-- Page content -->
+        <main class="p-8 max-w-screen-xl mx-auto">
+            <h1 class="text-2xl font-bold mb-4">Schedule</h1>
+            <table id="sched" class="w-full table-auto border-collapse">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border p-2">Event</th>
+                        <th class="border p-2">Team A</th>
+                        <th class="border p-2">Team B</th>
+                        <th class="border p-2">Time</th>
+                        <th class="border p-2">Venue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- rows go here -->
+                </tbody>
+            </table>
+        </main>
 
-        <table id="sched">
-            <thead>
-                <tr>
-                    <th>Event</th>
-                    <th>Team A</th>
-                    <th>Team B</th>
-                    <th>Time</th>
-                    <th>Venue</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- rows will be inserted here -->
-            </tbody>
-        </table>
-
+        <!-- includes: nav, Firebase, schedule logic -->
+        <script src="js/include-nav.js"></script>
         <script src="js/firebase-init.js" type="module"></script>
+        <script src="js/auth.js" type="module"></script>
         <script src="js/schedule.js" type="module"></script>
     </body>
 </html>
