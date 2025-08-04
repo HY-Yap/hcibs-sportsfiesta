@@ -6,7 +6,26 @@ import {
     sendPasswordResetEmail,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+import {
+    doc,
+    getDoc,
+    setDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import { db } from "./firebase-init.js";
+
 const auth = window.firebase.auth;
+
+async function setUserRole(user) {
+    const userRef = doc(db, "users", user.uid);
+    const docSnap = await getDoc(userRef);
+    if (!docSnap.exists()) {
+        await setDoc(userRef, {
+            role: "user",
+            email: user.email,
+        });
+    }
+}
 
 let wired = false;
 function initAuth() {
@@ -51,11 +70,12 @@ function initAuth() {
     window.handleModalLogin = async () => {
         errP.classList.add("hidden");
         try {
-            await signInWithEmailAndPassword(
+            const userCred = await signInWithEmailAndPassword(
                 auth,
                 emailInput.value,
                 passInput.value
             );
+            await setUserRole(userCred.user);
             closeModal();
         } catch (e) {
             if (e.code === "auth/too-many-requests") {
@@ -112,15 +132,20 @@ function initAuth() {
     );
 
     // Swap both sets of links based on auth state
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
+            const userRef = doc(db, "users", user.uid);
+            const docSnap = await getDoc(userRef);
+            const role = docSnap.exists() ? docSnap.data().role : "user";
+
             authLinks.forEach((a) => {
-                a.textContent = "My Dashboard";
+                a.textContent = role === "admin" ? "Admin Dashboard" : "My Dashboard";
                 a.onclick = (e) => {
                     e.preventDefault();
-                    window.location = "dashboard.html";
+                    window.location = role === "admin" ? "admin.html" : "dashboard.html";
                 };
             });
+
             logoutLinks.forEach((a) => a.classList.remove("hidden"));
         } else {
             authLinks.forEach((a) => {
