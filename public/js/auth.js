@@ -1,25 +1,45 @@
 // public/js/auth.js
-
-// 1) Load the Auth SDK
 import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
+    signOut,
+    sendPasswordResetEmail,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// 2) Grab the instance
 const auth = window.firebase.auth;
 
-// 3) Auth setup function (waits for nav to exist)
+let wired = false;
 function initAuth() {
-    const authBtn = document.getElementById("auth-menu-btn");
+    if (wired) return;
+
+    // Grab all Login/Logout links (desktop + mobile)
+    const authLinks = Array.from(document.querySelectorAll(".auth-menu-btn"));
+    const logoutLinks = Array.from(document.querySelectorAll(".logout-btn"));
+
+    // Modal elements
     const modal = document.getElementById("login-modal");
     const emailInput = document.getElementById("modal-email");
     const passInput = document.getElementById("modal-pass");
+    const forgotBtn = document.getElementById("forgot-btn");
     const errP = document.getElementById("modal-error");
 
-    if (!authBtn || !modal) {
-        // nav not yet in DOM
-        return;
+    if (!modal || authLinks.length === 0) return; // nav not injected yet
+    wired = true;
+
+    // Backdrop/Escape close
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener("keydown", (e) => {
+        if (!modal.classList.contains("hidden") && e.key === "Escape")
+            closeModal();
+    });
+
+    function showMsg(text, good = false) {
+        errP.textContent = text;
+        errP.classList.remove("hidden");
+        errP.classList.toggle("text-green-600", good);
+        errP.classList.toggle("text-red-600", !good);
     }
 
     window.closeModal = () => {
@@ -38,31 +58,83 @@ function initAuth() {
             );
             closeModal();
         } catch (e) {
-            errP.textContent =
-                {
-                    "auth/invalid-email": "Invalid email.",
-                    "auth/user-not-found": "No account found.",
-                    "auth/wrong-password": "Wrong password.",
-                    "auth/too-many-requests": "Too many attempts; try later.",
-                }[e.code] || "Login failed.";
-            errP.classList.remove("hidden");
+            if (e.code === "auth/too-many-requests") {
+                showMsg("Too many attempts. Try again later.");
+            } else {
+                showMsg("Incorrect email/password.");
+            }
         }
     };
 
+    // Forgot password (neutral messaging)
+    if (forgotBtn) {
+        forgotBtn.onclick = async () => {
+            const email = emailInput.value.trim();
+            if (!email) {
+                showMsg("Enter your email first.");
+                return;
+            }
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showMsg(
+                    "If an account exists for that email, we’ve sent a reset link. If you did not receive it, please check your spam.",
+                    true
+                );
+            } catch (e) {
+                if (e.code === "auth/invalid-email") {
+                    showMsg("Enter a valid email address.");
+                } else {
+                    showMsg(
+                        "If an account exists for that email, we’ve sent a reset link. If you did not receive it, please check your spam.",
+                        true
+                    );
+                }
+            }
+        };
+    }
+
+    // Default: all login links open modal (works before auth state arrives)
+    authLinks.forEach(
+        (a) =>
+            (a.onclick = (e) => {
+                e.preventDefault();
+                modal.classList.remove("hidden");
+            })
+    );
+
+    // Logout handlers
+    logoutLinks.forEach(
+        (a) =>
+            (a.onclick = async (e) => {
+                e.preventDefault();
+                await signOut(auth);
+            })
+    );
+
+    // Swap both sets of links based on auth state
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            authBtn.textContent = "My Dashboard";
-            authBtn.onclick = () => (window.location = "dashboard.html");
+            authLinks.forEach((a) => {
+                a.textContent = "My Dashboard";
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    window.location = "dashboard.html";
+                };
+            });
+            logoutLinks.forEach((a) => a.classList.remove("hidden"));
         } else {
-            authBtn.textContent = "Login";
-            authBtn.onclick = () => modal.classList.remove("hidden");
+            authLinks.forEach((a) => {
+                a.textContent = "Login";
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    modal.classList.remove("hidden");
+                };
+            });
+            logoutLinks.forEach((a) => a.classList.add("hidden"));
         }
     });
 }
 
-// 4) Kick off when nav is injected
-if (document.readyState === "complete") {
-    initAuth();
-} else {
-    document.addEventListener("nav-loaded", initAuth);
-}
+// Run after nav injection, and try immediately
+document.addEventListener("nav-loaded", initAuth);
+initAuth();
