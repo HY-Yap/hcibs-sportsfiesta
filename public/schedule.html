@@ -3,37 +3,228 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Schedule · Sports Fiesta</title>
+        <title>Sports Fiesta - Schedule</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <link rel="icon" href="data:," />
     </head>
-    <body class="min-h-screen">
-        <!-- Injected nav -->
+    <body class="bg-gray-100">
+        <!-- Navigation (Already set up) -->
         <div id="nav-placeholder"></div>
 
-        <!-- Page content -->
-        <main class="p-8 max-w-screen-xl mx-auto">
-            <h1 class="text-2xl font-bold mb-4">Schedule</h1>
-            <table id="sched" class="w-full table-auto border-collapse">
-                <thead>
-                    <tr class="bg-gray-100">
-                        <th class="border p-2">Event</th>
-                        <th class="border p-2">Team A</th>
-                        <th class="border p-2">Team B</th>
-                        <th class="border p-2">Time</th>
-                        <th class="border p-2">Venue</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- rows go here -->
-                </tbody>
-            </table>
-        </main>
+        <div class="container mx-auto p-8">
+            <!-- Buttons to filter sport-specific match schedules -->
+            <div
+                class="flex flex-wrap justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8"
+            >
+                <button
+                    id="badminton-btn"
+                    class="px-6 py-3 text-lg font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none w-full sm:w-auto"
+                >
+                    Badminton Match Schedule
+                </button>
+                <button
+                    id="frisbee-btn"
+                    class="px-6 py-3 text-lg font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none w-full sm:w-auto"
+                >
+                    Frisbee Match Schedule
+                </button>
+                <button
+                    id="basketball-btn"
+                    class="px-6 py-3 text-lg font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none w-full sm:w-auto"
+                >
+                    Basketball Match Schedule
+                </button>
+            </div>
 
-        <!-- includes: nav, Firebase, schedule logic -->
+            <!-- Tabs for Day 1 and Day 2 -->
+            <div class="tabs flex space-x-4 mb-8">
+                <button
+                    id="day1-tab"
+                    class="px-6 py-2 text-lg font-semibold border-b-2 border-transparent hover:border-blue-500 focus:outline-none tab-btn"
+                >
+                    Day 1
+                </button>
+                <button
+                    id="day2-tab"
+                    class="px-6 py-2 text-lg font-semibold border-b-2 border-transparent hover:border-blue-500 focus:outline-none tab-btn"
+                >
+                    Day 2
+                </button>
+            </div>
+
+            <!-- Day 1 Schedule -->
+            <div id="day1-schedule" class="schedule-day hidden">
+                <h2 class="text-2xl font-semibold mb-4">
+                    Friday, 22 August
+                </h2>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        7:30 PM - Badminton Heats Reporting Time
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Badminton Heats (Singles and Doubles), Venue: Kah
+                        Kee Hall
+                    </p>
+                </div>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        7:45 PM - Badminton Heats Briefing
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Badminton Heats (Singles and Doubles), Venue: Kah
+                        Kee Hall
+                    </p>
+                </div>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        8:00 PM - 10:00 PM - Badminton Heats Matches
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Badminton Heats (Singles and Doubles), Venue: Kah
+                        Kee Hall
+                    </p>
+                </div>
+            </div>
+
+            <!-- Day 2 Schedule -->
+            <div id="day2-schedule" class="schedule-day hidden">
+                <h2 class="text-2xl font-semibold mb-4">
+                    Saturday, 23 August
+                </h2>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        7:30 AM - 7:45 AM - Frisbee Safety Briefing &
+                        Preparation
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Frisbee, Venue: Hwa Chong Field
+                    </p>
+                </div>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        7:45 AM - 11:00 AM - Frisbee Group Stage & Eliminations
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Frisbee, Venue: Hwa Chong Field
+                    </p>
+                </div>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        12:30 PM - Badminton Eliminations Reporting Time
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Badminton Eliminations (Singles and Doubles),
+                        Venue: Kah Kee Hall
+                    </p>
+                </div>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        12:45 PM - Badminton Eliminations Briefing
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Badminton Eliminations (Singles and Doubles),
+                        Venue: Kah Kee Hall
+                    </p>
+                </div>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        1:00 PM - 2:00 PM - Badminton Elimination Matches
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Badminton Eliminations (Singles and Doubles),
+                        Venue: Kah Kee Hall
+                    </p>
+                </div>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        3:15 PM - Basketball Reporting Time
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Basketball, Venue: JC Indoor Sports Hall
+                    </p>
+                </div>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        3:25 PM - Basketball Briefing
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Basketball, Venue: JC Indoor Sports Hall
+                    </p>
+                </div>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        3:30 PM - 6:30 PM - Basketball Matches
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Basketball, Venue: JC Indoor Sports Hall
+                    </p>
+                </div>
+
+                <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
+                    <h3 class="font-bold text-xl">
+                        7:00 PM - 7:30 PM - Dinner & Award Ceremony
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        Event: Awards Ceremony, Venue: Dining Hall
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Includes: nav, Firebase, schedule logic -->
         <script src="js/include-nav.js"></script>
         <script src="js/firebase-init.js" type="module"></script>
-        <script src="js/auth.js" type="module"></script>
         <script src="js/schedule.js" type="module"></script>
+
+        <script>
+            // Tab switching logic
+            document
+                .getElementById("day1-tab")
+                .addEventListener("click", function () {
+                    document
+                        .getElementById("day1-schedule")
+                        .classList.remove("hidden");
+                    document
+                        .getElementById("day2-schedule")
+                        .classList.add("hidden");
+                    setActiveTab("day1-tab");
+                });
+
+            document
+                .getElementById("day2-tab")
+                .addEventListener("click", function () {
+                    document
+                        .getElementById("day1-schedule")
+                        .classList.add("hidden");
+                    document
+                        .getElementById("day2-schedule")
+                        .classList.remove("hidden");
+                    setActiveTab("day2-tab");
+                });
+
+            // Set active tab
+            function setActiveTab(activeTabId) {
+                const tabs = document.querySelectorAll(".tab-btn");
+                tabs.forEach((tab) =>
+                    tab.classList.remove("border-blue-500", "text-blue-500")
+                );
+                const activeTab = document.getElementById(activeTabId);
+                activeTab.classList.add("border-blue-500", "text-blue-500");
+            }
+
+            // Default to showing Day 1 Schedule
+            document.getElementById("day1-schedule").classList.remove("hidden");
+            setActiveTab("day1-tab");
+        </script>
     </body>
 </html>
