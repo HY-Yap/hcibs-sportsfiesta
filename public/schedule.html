@@ -5,36 +5,26 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Sports Fiesta - Schedule</title>
         <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: {
+                                DEFAULT: "#2563eb", // same blue as Tailwind's blue-600
+                                dark: "#1e40af",
+                            }, // blue-800 tone
+                        },
+                    },
+                },
+            };
+        </script>
     </head>
     <body class="bg-gray-100">
         <!-- Navigation (Already set up) -->
         <div id="nav-placeholder"></div>
 
         <div class="container mx-auto p-8">
-            <!-- Buttons to filter sport-specific match schedules -->
-            <div
-                class="flex flex-wrap justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8"
-            >
-                <button
-                    id="badminton-btn"
-                    class="px-6 py-3 text-lg font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none w-full sm:w-auto"
-                >
-                    Badminton Match Schedule
-                </button>
-                <button
-                    id="frisbee-btn"
-                    class="px-6 py-3 text-lg font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none w-full sm:w-auto"
-                >
-                    Frisbee Match Schedule
-                </button>
-                <button
-                    id="basketball-btn"
-                    class="px-6 py-3 text-lg font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none w-full sm:w-auto"
-                >
-                    Basketball Match Schedule
-                </button>
-            </div>
-
             <!-- Tabs for Day 1 and Day 2 -->
             <div class="tabs flex space-x-4 mb-8">
                 <button
@@ -53,9 +43,7 @@
 
             <!-- Day 1 Schedule -->
             <div id="day1-schedule" class="schedule-day hidden">
-                <h2 class="text-2xl font-semibold mb-4">
-                    Friday, 22 August
-                </h2>
+                <h2 class="text-2xl font-semibold mb-4">Friday, 22 August</h2>
 
                 <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
                     <h3 class="font-bold text-xl">
@@ -90,9 +78,7 @@
 
             <!-- Day 2 Schedule -->
             <div id="day2-schedule" class="schedule-day hidden">
-                <h2 class="text-2xl font-semibold mb-4">
-                    Saturday, 23 August
-                </h2>
+                <h2 class="text-2xl font-semibold mb-4">Saturday, 23 August</h2>
 
                 <div class="event-card bg-white p-6 rounded-lg shadow-lg mb-6">
                     <h3 class="font-bold text-xl">
@@ -184,6 +170,7 @@
         <!-- Includes: nav, Firebase, schedule logic -->
         <script src="js/include-nav.js"></script>
         <script src="js/firebase-init.js" type="module"></script>
+        <script src="js/auth.js" type="module"></script>
         <script src="js/schedule.js" type="module"></script>
 
         <script>

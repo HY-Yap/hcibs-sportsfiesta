@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Sports Fiesta · Matches & Results</title>
+
+        <!-- Tailwind CDN with same primary colour you used on Schedule -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: { DEFAULT: "#2563eb", dark: "#1e40af" },
+                        },
+                    },
+                },
+            };
+        </script>
+    </head>
+
+    <body class="bg-gray-100 min-h-screen">
+        <!-- shared navigation -->
+        <div id="nav-placeholder"></div>
+
+        <main class="max-w-screen-xl mx-auto p-4">
+            <h1 class="text-3xl font-semibold mb-6">Matches &amp; Results</h1>
+
+            <!-- sport tabs (same utility classes as Day-tabs) -->
+            <div
+                id="sport-tabs"
+                class="flex flex-wrap sm:flex-nowrap gap-4 mb-6"
+            >
+                <button
+                    data-sport="badminton"
+                    class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
+                >
+                    Badminton
+                </button>
+
+                <button
+                    data-sport="frisbee"
+                    class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
+                >
+                    Frisbee
+                </button>
+
+                <button
+                    data-sport="basketball"
+                    class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
+                >
+                    Basketball
+                </button>
+            </div>
+
+            <!-- matches list -->
+            <div id="match-container" class="text-sm"></div>
+        </main>
+
+        <!-- shared + page scripts -->
+        <script src="js/include-nav.js"></script>
+        <script src="js/firebase-init.js" type="module"></script>
+        <script src="js/auth.js" type="module"></script>
+        <script src="js/matches.js" type="module"></script>
+    </body>
+</html>
