@@ -1,4 +1,13 @@
 {
-  "indexes": [],
-  "fieldOverrides": []
+    "indexes": [
+        {
+            "collectionGroup": "matches",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "event_id", "order": "ASCENDING" },
+                { "fieldPath": "scheduled_at", "order": "ASCENDING" }
+            ]
+        }
+    ],
+    "fieldOverrides": []
 }
