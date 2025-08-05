@@ -1,10 +1,11 @@
 /*  Matches & Results — live table with sport tabs
-    ---------------------------------------------- */
+    ------------------------------------------------- */
 
 import {
     collection,
     query,
     where,
+    orderBy,
     onSnapshot,
     doc,
     getDoc,
@@ -27,7 +28,7 @@ async function teamName(id) {
     }
 }
 
-/* ---------- tiny render helpers ---------- */
+/* ---------- tiny helpers ---------- */
 const td = (c, x = "") => `<td class="px-2 py-1 ${x}">${c}</td>`;
 const scoreTd = (s, w) => td(s ?? "-", `text-right ${w ? "font-bold" : ""}`);
 const teamTd = (n, w, col) =>
@@ -39,22 +40,25 @@ const teamTd = (n, w, col) =>
     );
 function badge(st) {
     const base = "inline-block px-2 py-0.5 rounded text-xs";
-    return (
-        ({
-            scheduled: `${base} bg-yellow-100 text-yellow-600">upcoming`,
-            live: `${base} bg-green-100 text-green-600 animate-pulse">live`,
-            final: `${base} bg-gray-200  text-gray-700">final`,
-        }[st] || `${base} bg-gray-100 text-gray-500">${st}`) + "</span>"
-    );
+    const cls =
+        {
+            scheduled: `${base} bg-yellow-100 text-yellow-600`,
+            live: `${base} bg-green-100 text-green-600 animate-pulse`,
+            final: `${base} bg-gray-200  text-gray-700`,
+        }[st] ?? `${base} bg-gray-100 text-gray-500`;
+    return `<span class="${cls}">${
+        st === "scheduled" ? "upcoming" : st
+    }</span>`;
 }
 
-/* ---------- live listener ---------- */
-function renderTable(bodyHtml) {
+/* ---------- table wrapper ---------- */
+function renderTable(body) {
     return `<div class="overflow-x-auto">
     <table class="min-w-full whitespace-nowrap text-sm">
       <thead class="bg-primary text-white">
         <tr>${[
             "Match",
+            "Time",
             "Red Team",
             "Score",
             "Blue Team",
@@ -67,20 +71,23 @@ function renderTable(bodyHtml) {
         </tr>
       </thead>
       <tbody>${
-          bodyHtml ||
-          '<tr><td colspan="7" class="p-4 text-center text-gray-500">No matches yet.</td></tr>'
+          body ||
+          '<tr><td colspan="8" class="p-4 text-center text-gray-500">No matches yet.</td></tr>'
       }
       </tbody>
     </table>
   </div>`;
 }
 
+/* ---------- live listener per sport ---------- */
 function listenSport(eventId) {
     container.innerHTML = '<p class="p-4 text-gray-500">Loading…</p>';
     const q = query(
         collection(db, "matches"),
-        where("event_id", "==", eventId)
+        where("event_id", "==", eventId),
+        orderBy("scheduled_at") // chronological
     );
+
     return onSnapshot(q, async (snap) => {
         const rows = [];
         for (const d of snap.docs) {
@@ -89,10 +96,22 @@ function listenSport(eventId) {
                 teamName(m.competitor_a.id),
                 teamName(m.competitor_b.id),
             ]);
+
             const aWin = m.status === "final" && m.score_a > m.score_b;
             const bWin = m.status === "final" && m.score_b > m.score_a;
+
+            // HH:MM 24-h in Singapore time
+            const time = m.scheduled_at
+                ? m.scheduled_at.toDate().toLocaleTimeString("en-SG", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                  })
+                : "-";
+
             rows.push(`<tr class="even:bg-gray-50">
         ${td(`#${d.id}`)}
+        ${td(time, "text-center")}
         ${teamTd(red, aWin, "red")}
         ${scoreTd(m.score_a, aWin)}
         ${teamTd(blue, bWin, "blue")}
@@ -105,7 +124,7 @@ function listenSport(eventId) {
     });
 }
 
-/* ---------- init: tab wiring, same highlight classes as schedule ---------- */
+/* ---------- tab wiring (same style as schedule) ---------- */
 function initSportTabs() {
     const btns = document.querySelectorAll(".sport-tab");
     let unsub = null;
@@ -129,4 +148,4 @@ function initSportTabs() {
     (document.querySelector('[data-sport="badminton"]') || btns[0]).click();
 }
 
-initSportTabs(); // runs on module load
+initSportTabs(); // run on module load
