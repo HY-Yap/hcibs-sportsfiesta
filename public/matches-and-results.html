@@ -29,35 +29,39 @@
             <!-- sport tabs -->
             <div
                 id="sport-tabs"
-                class="flex flex-wrap sm:flex-nowrap gap-4 mb-6"
+                class="flex flex-col sm:flex-row flex-wrap gap-4 mb-6"
             >
-                <button
-                    data-sport="badminton_singles"
-                    class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
-                >
-                    Badminton Singles
-                </button>
+                <div class="flex gap-4 flex-1 sm:flex-none">
+                    <button
+                        data-sport="badminton_singles"
+                        class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
+                    >
+                        Badminton Singles
+                    </button>
 
-                <button
-                    data-sport="badminton_doubles"
-                    class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
-                >
-                    Badminton Doubles
-                </button>
+                    <button
+                        data-sport="badminton_doubles"
+                        class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
+                    >
+                        Badminton Doubles
+                    </button>
+                </div>
 
-                <button
-                    data-sport="frisbee5v5"
-                    class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
-                >
-                    Frisbee
-                </button>
+                <div class = "flex gap-4 flex-1 sm:flex-none">
+                    <button
+                        data-sport="frisbee5v5"
+                        class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
+                    >
+                        Frisbee
+                    </button>
 
-                <button
-                    data-sport="basketball3v3"
-                    class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
-                >
-                    Basketball
-                </button>
+                    <button
+                        data-sport="basketball3v3"
+                        class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"
+                    >
+                        Basketball
+                    </button>
+                </div>
             </div>
 
             <div id="match-container" class="text-sm"></div>
