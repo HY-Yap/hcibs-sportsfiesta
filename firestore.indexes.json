@@ -7,6 +7,23 @@
                 { "fieldPath": "event_id", "order": "ASCENDING" },
                 { "fieldPath": "scheduled_at", "order": "ASCENDING" }
             ]
+        },
+        {
+            "collectionGroup": "matches",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "status", "order": "ASCENDING" },
+                { "fieldPath": "scheduled_at", "order": "ASCENDING" }
+            ]
+        },
+        {
+            "collectionGroup": "matches",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "event_id", "order": "ASCENDING" },
+                { "fieldPath": "venue", "order": "ASCENDING" },
+                { "fieldPath": "scheduled_at", "order": "ASCENDING" }
+            ]
         }
     ],
     "fieldOverrides": []

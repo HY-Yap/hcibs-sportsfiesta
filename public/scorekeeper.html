@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Score Keeper · Sports Fiesta</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: {
+                                DEFAULT: "#2563eb",
+                                dark: "#1e40af",
+                            } /* blue-600 / 800 */,
+                        },
+                    },
+                },
+            };
+        </script>
+    </head>
+    <body class="bg-gray-100 min-h-screen">
+        <div id="nav-placeholder"></div>
+
+        <main class="max-w-screen-lg mx-auto p-4">
+            <h1 class="text-3xl font-semibold mb-6">Score Keeper</h1>
+
+            <!-- error / login status -->
+            <p id="msg" class="mb-4 text-red-600 hidden"></p>
+
+            <!-- match picker -->
+            <section id="picker" class="mb-8">
+                <h2 class="text-xl font-medium mb-2">Select a match</h2>
+                <select
+                    id="matchSelect"
+                    class="w-full sm:w-96 p-2 border rounded"
+                ></select>
+                <button
+                    id="loadBtn"
+                    class="ml-2 px-3 py-1 rounded bg-primary text-white hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed"
+                    disabled
+                >
+                    Load
+                </button>
+            </section>
+
+            <!-- scoring panel -->
+            <section id="panel" class="hidden">
+                <h2 id="matchLabel" class="text-xl font-medium mb-4"></h2>
+
+                <div class="flex items-center gap-8 mb-6">
+                    <div class="text-center">
+                        <p
+                            id="redTeam"
+                            class="text-red-600 text-2xl font-bold mb-2"
+                        >
+                            –
+                        </p>
+                        <button
+                            class="scoreBtn px-3 py-1 border rounded"
+                            data-delta="-1"
+                            data-side="a"
+                        >
+                            -
+                        </button>
+                        <span id="scoreA" class="mx-3 text-xl">0</span>
+                        <button
+                            class="scoreBtn px-3 py-1 border rounded"
+                            data-delta="1"
+                            data-side="a"
+                        >
+                            +
+                        </button>
+                    </div>
+
+                    <div
+                        id="centerCol"
+                        class="flex flex-col items-center gap-2"
+                    >
+                        <div id="timer" class="text-4xl font-mono">10:00</div>
+                    </div>
+
+                    <div class="text-center">
+                        <p
+                            id="blueTeam"
+                            class="text-blue-600 text-2xl font-bold mb-2"
+                        >
+                            –
+                        </p>
+                        <button
+                            class="scoreBtn px-3 py-1 border rounded"
+                            data-delta="-1"
+                            data-side="b"
+                        >
+                            -
+                        </button>
+                        <span id="scoreB" class="mx-3 text-xl">0</span>
+                        <button
+                            class="scoreBtn px-3 py-1 border rounded"
+                            data-delta="1"
+                            data-side="b"
+                        >
+                            +
+                        </button>
+                    </div>
+                </div>
+
+                <button
+                    id="startBtn"
+                    class="px-4 py-2 bg-green-600 text-white rounded"
+                >
+                    Start Match
+                </button>
+                <button
+                    id="endBtn"
+                    class="ml-4 px-4 py-2 bg-gray-800 text-white rounded hidden"
+                >
+                    End Match
+                </button>
+            </section>
+        </main>
+
+        <script src="js/include-nav.js"></script>
+        <script src="js/firebase-init.js" type="module"></script>
+        <script src="js/auth.js" type="module"></script>
+        <script src="js/scorekeeper.js" type="module"></script>
+    </body>
+</html>

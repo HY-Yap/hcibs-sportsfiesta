@@ -1,5 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
+  // add near the top of firestore.rules
+  match /matches/{matchId} {
+    allow update: if isAdmin() || isScorekeeper();
+    allow read  : if true;
+  }
   match /databases/{database}/documents {
 
     /* ───────── PUBLIC READ ───────── */
@@ -13,6 +18,21 @@ service cloud.firestore {
       allow read:  if true;
       allow write: if isAdmin() ||
                    isAllowedScorekeeper(resource.data.event_id);
+      allow update: if request.auth != null
+                    && request.auth.token.role == "scorekeeper"
+                    && resource.data.status in ["scheduled","live"]
+                    && (
+                        (   // starting a match
+                            request.resource.data.status == "live"
+                            && request.resource.data.actual_start is timestamp
+                        )
+                        ||
+                        (   // finishing a match
+                            request.resource.data.status == "final"
+                            && request.resource.data.score_a is number
+                            && request.resource.data.score_b is number
+                        )
+                      );
     }
 
     match /teams/{teamId} {
