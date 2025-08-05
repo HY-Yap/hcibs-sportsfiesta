@@ -85,13 +85,13 @@
             id="modal-email"
             type="email"
             placeholder="Email"
-            class="w-full mb-3 p-2 border rounded"
+            class="w-full mb-3 p-2 border rounded hover:border-gray-500"
         />
         <input
             id="modal-pass"
             type="password"
             placeholder="Password"
-            class="w-full mb-2 p-2 border rounded"
+            class="w-full mb-2 p-2 border rounded hover:border-gray-500"
         />
         <button
             id="forgot-btn"
@@ -102,7 +102,7 @@
         </button>
         <p id="modal-error" class="text-red-600 text-sm mb-3 hidden"></p>
         <div class="flex justify-end gap-2">
-            <button onclick="closeModal()" class="px-4 py-2">Cancel</button>
+            <button onclick="closeModal()" class="px-4 py-2 border rounded border-black hover:bg-gray-200">Cancel</button>
             <button
                 onclick="handleModalLogin()"
                 class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
