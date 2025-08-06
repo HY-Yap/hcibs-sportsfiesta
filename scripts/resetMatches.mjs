@@ -21,4 +21,16 @@ snap.forEach((d) => {
 
 await batch.commit();
 console.log(`🔄  reset ${snap.size} matches to 0-0, status=scheduled`);
+
+// reset all awards
+const awardsSnap = await db.collection("awards").get();
+const awardsBatch = db.batch();
+
+awardsSnap.forEach((d) => {
+    awardsBatch.delete(d.ref);
+});
+
+await awardsBatch.commit();
+console.log(`🗑️  deleted ${awardsSnap.size} award documents`);
+
 process.exit(0);
