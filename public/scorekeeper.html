@@ -23,105 +23,153 @@
     <body class="bg-gray-100 min-h-screen">
         <div id="nav-placeholder"></div>
 
-        <main class="max-w-screen-lg mx-auto p-4">
-            <h1 class="text-3xl font-semibold mb-6">Score Keeper</h1>
+        <main class="max-w-screen-md mx-auto p-4 flex flex-col items-center">
+            <h1 class="text-3xl font-semibold mb-6 text-center">
+                Score Keeper
+            </h1>
 
             <!-- error / login status -->
-            <p id="msg" class="mb-4 text-red-600 hidden"></p>
+            <p id="msg" class="mb-4 text-red-600 hidden text-center"></p>
 
             <!-- match picker -->
-            <section id="picker" class="mb-8">
-                <h2 class="text-xl font-medium mb-2">Select a match</h2>
-                <select
-                    id="matchSelect"
-                    class="w-full sm:w-96 p-2 border rounded"
-                ></select>
-                <button
-                    id="loadBtn"
-                    class="ml-2 px-3 py-1 rounded bg-primary text-white hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed"
-                    disabled
-                >
-                    Load
-                </button>
+            <section id="picker" class="mb-8 w-full max-w-md">
+                <!-- Event selector -->
+                <div class="mb-6 w-full">
+                    <h2 class="text-xl font-medium mb-2 text-center">
+                        Select an event
+                    </h2>
+                    <select
+                        id="eventSelect"
+                        class="w-full p-2 border rounded text-sm"
+                    >
+                        <option value="">Choose an event...</option>
+                        <!-- options will be injected by JS -->
+                    </select>
+                </div>
+                <h2 class="text-xl font-medium mb-2 text-center">
+                    Select a match
+                </h2>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <select
+                        id="matchSelect"
+                        class="flex-1 p-2 border rounded text-sm"
+                    ></select>
+                    <button
+                        id="loadBtn"
+                        class="px-4 py-2 rounded bg-primary text-white hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                        disabled
+                    >
+                        Load
+                    </button>
+                </div>
             </section>
 
             <!-- scoring panel -->
-            <section id="panel" class="hidden">
-                <h2 id="matchLabel" class="text-xl font-medium mb-4"></h2>
+            <section id="panel" class="hidden w-full max-w-lg">
+                <h2
+                    id="matchLabel"
+                    class="text-lg font-medium mb-6 text-center px-2"
+                ></h2>
 
-                <div class="flex items-center gap-8 mb-6">
-                    <div class="text-center">
-                        <p
-                            id="redTeam"
-                            class="text-red-600 text-2xl font-bold mb-2"
-                        >
-                            –
-                        </p>
-                        <div class="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3">
-                            <button
-                                class="scoreBtn px-3 py-1 border rounded"
-                                data-delta="-1"
-                                data-side="a"
+                <!-- Score layout -->
+                <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                    <!-- Team names row -->
+                    <div class="grid grid-cols-3 gap-2 mb-4 items-center">
+                        <div class="text-center">
+                            <p
+                                id="redTeam"
+                                class="text-red-600 text-lg font-bold leading-tight break-words"
                             >
-                                -
-                            </button>
-                            <span id="scoreA" class="mx-3 text-xl">0</span>
-                            <button
-                                class="scoreBtn px-3 py-1 border rounded"
-                                data-delta="1"
-                                data-side="a"
+                                –
+                            </p>
+                        </div>
+                        <div class="text-center">
+                            <div id="timer" class="text-2xl font-mono">
+                                10:00
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <p
+                                id="blueTeam"
+                                class="text-blue-600 text-lg font-bold leading-tight break-words"
                             >
-                                +
-                            </button>
+                                –
+                            </p>
                         </div>
                     </div>
 
-                    <div
-                        id="centerCol"
-                        class="flex flex-col items-center gap-2"
-                    >
-                        <div id="timer" class="text-4xl font-mono">10:00</div>
-                    </div>
-
-                    <div class="text-center">
-                        <p
-                            id="blueTeam"
-                            class="text-blue-600 text-2xl font-bold mb-2"
-                        >
-                            –
-                        </p>
-                        <div class="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3">
+                    <!-- Scores and controls row -->
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <!-- Left team controls -->
+                        <div class="flex flex-col items-center gap-2">
                             <button
-                                class="scoreBtn px-3 py-1 border rounded"
-                                data-delta="-1"
-                                data-side="b"
+                                class="scoreBtn w-10 h-10 bg-red-100 hover:bg-red-200 text-red-700 rounded-full flex items-center justify-center font-bold"
+                                data-delta="1"
+                                data-side="a"
                             >
-                                -
+                                +
                             </button>
-                            <span id="scoreB" class="mx-3 text-xl">0</span>
+                            <span
+                                id="scoreA"
+                                class="text-3xl font-bold text-red-600"
+                                >0</span
+                            >
                             <button
-                                class="scoreBtn px-3 py-1 border rounded"
+                                class="scoreBtn w-10 h-10 bg-red-100 hover:bg-red-200 text-red-700 rounded-full flex items-center justify-center font-bold"
+                                data-delta="-1"
+                                data-side="a"
+                            >
+                                −
+                            </button>
+                        </div>
+
+                        <!-- Center column (VS) -->
+                        <div class="flex items-center justify-center">
+                            <span class="text-2xl font-bold text-gray-500"
+                                >VS</span
+                            >
+                        </div>
+
+                        <!-- Right team controls -->
+                        <div class="flex flex-col items-center gap-2">
+                            <button
+                                class="scoreBtn w-10 h-10 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full flex items-center justify-center font-bold"
                                 data-delta="1"
                                 data-side="b"
                             >
                                 +
+                            </button>
+                            <span
+                                id="scoreB"
+                                class="text-3xl font-bold text-blue-600"
+                                >0</span
+                            >
+                            <button
+                                class="scoreBtn w-10 h-10 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full flex items-center justify-center font-bold"
+                                data-delta="-1"
+                                data-side="b"
+                            >
+                                −
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <button
-                    id="startBtn"
-                    class="px-4 py-2 bg-green-600 text-white rounded"
-                >
-                    Start Match
-                </button>
-                <button
-                    id="endBtn"
-                    class="ml-4 px-4 py-2 bg-gray-800 text-white rounded hidden"
-                >
-                    End Match
-                </button>
+                <!-- Action buttons -->
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                        id="startBtn"
+                        class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
+                    >
+                        Start Match
+                    </button>
+                    <button
+                        id="endBtn"
+                        class="px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-lg font-medium hidden"
+                    >
+                        End Match
+                    </button>
+                </div>
             </section>
         </main>
 

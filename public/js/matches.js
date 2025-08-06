@@ -91,6 +91,13 @@ function shell(rowsHtml) {
 }
 
 /* ----------  live listener per event ---------- */
+// Helper function to extract numeric part from match ID
+function extractMatchNumber(matchId) {
+    // Extract number from IDs like "S-Q10", "D-F2", "S-SF1"
+    const match = matchId.match(/(\d+)$/);
+    return match ? parseInt(match[1]) : 0;
+}
+
 function listen(eventId) {
     container.innerHTML = '<p class="p-4 text-gray-500">Loading…</p>';
 
@@ -101,9 +108,25 @@ function listen(eventId) {
     );
 
     return onSnapshot(q, async (snap) => {
+        // Sort the results after fetching to fix the numbering
+        const sortedDocs = snap.docs.sort((a, b) => {
+            const aTime = a.data().scheduled_at.toMillis();
+            const bTime = b.data().scheduled_at.toMillis();
+
+            // If times are different, sort by time
+            if (aTime !== bTime) {
+                return aTime - bTime;
+            }
+
+            // If times are same, sort by match number
+            const aMatch = extractMatchNumber(a.id);
+            const bMatch = extractMatchNumber(b.id);
+            return aMatch - bMatch;
+        });
+
         const rows = [];
 
-        for (const d of snap.docs) {
+        for (const d of sortedDocs) {
             const m = d.data();
             const [red, blue] = await Promise.all([
                 teamName(m.competitor_a.id),
