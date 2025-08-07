@@ -1,4 +1,4 @@
-// public/js/dashboard.js
+// public/js/sk.dashboard.js
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./js/firebase-init.js";
@@ -13,10 +13,10 @@ onAuthStateChanged(auth, async (user) => {
     const docSnap = await getDoc(userRef);
     const role = docSnap.exists() ? docSnap.data().role : "user";
 
-    if (role !== "user") {
-        alert("Access denied. Normal users only.");
+    if (role !== "scorekeeper") {
+        alert("Access denied. Scorekeepers only.");
         if (role === "admin") window.location.href = "admin.html";
-        else if (role === "scorekeeper") window.location.href = "sk-dashboard.html";
+        else if (role === "user") window.location.href = "dashboard.html";
         else window.location.href = "index.html";
         return;
     }

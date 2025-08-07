@@ -139,11 +139,26 @@ function initAuth() {
             const role = docSnap.exists() ? docSnap.data().role : "user";
 
             authLinks.forEach((a) => {
-                a.textContent = role === "admin" ? "Admin Dashboard" : "My Dashboard";
-                a.onclick = (e) => {
-                    e.preventDefault();
-                    window.location = role === "admin" ? "admin.html" : "dashboard.html";
-                };
+                if (role === "admin") {
+                    a.textContent = "Admin Dashboard";
+                    a.onclick = (e) => {
+                        e.preventDefault();
+                        window.location = "admin.html";
+                    };
+                } else if (role === "scorekeeper") {
+                    a.textContent = "Scorekeeper Dashboard";
+                    a.onclick = (e) => {
+                        e.preventDefault();
+                        window.location = "sk-dashboard.html";
+                    };
+                } else {
+                    // default user
+                    a.textContent = "My Dashboard";
+                    a.onclick = (e) => {
+                        e.preventDefault();
+                        window.location = "dashboard.html";
+                    };
+                }
             });
 
             logoutLinks.forEach((a) => a.classList.remove("hidden"));

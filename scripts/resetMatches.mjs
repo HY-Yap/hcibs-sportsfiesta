@@ -1,7 +1,9 @@
 // scripts/reset-matches.mjs
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const serviceAccount = require("./serviceAccountKey.json");
 // -- adjust the relative path above if your key isn’t in scripts/
 
 initializeApp({ credential: cert(serviceAccount) });
