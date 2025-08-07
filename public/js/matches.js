@@ -51,10 +51,11 @@ const badge = (st) => {
     scheduled : "bg-yellow-200 text-yellow-900",
     live      : "bg-green-200  text-green-900 animate-pulse",
     final     : "bg-gray-300   text-gray-800",
+    void      : "bg-red-200 text-red-900",
   })[st] ?? "bg-gray-100 text-gray-600";
 
   return `<span class="inline-block px-2 py-0.5 rounded text-xs ${classes}">
-            ${st === "scheduled" ? "upcoming" : st}
+            ${st === "scheduled" ? "upcoming" : st === "void" ? "cancelled" : st}
           </span>`;
 };
 
@@ -90,12 +91,91 @@ function shell(rowsHtml) {
   </div>`;
 }
 
+/* ----------  progressive reveal helpers ---------- */
+function isPlaceholder(teamId) {
+    if (!teamId) return true;
+    // Check for placeholder patterns like SFW1, SFW2, SBW1, SBW2, etc.
+    return teamId.match(/^[SD][FB]W\d+$/);
+}
+
+function shouldShowMatch(match) {
+    const { competitor_a, competitor_b, match_type, status } = match;
+
+    // Always show qualifiers
+    if (match_type === "qualifier") return true;
+
+    // Don't show voided matches
+    if (status === "void") return false;
+
+    // For series matches (semi/bronze/final), only show if:
+    // 1. Both competitors are real teams (not placeholders)
+    // 2. OR the match has already started/finished
+    const bothConfirmed =
+        !isPlaceholder(competitor_a?.id) && !isPlaceholder(competitor_b?.id);
+    const hasStarted = status === "live" || status === "final";
+
+    return bothConfirmed || hasStarted;
+}
+
+function shouldShowGame3(matchId, allMatches) {
+    // Only check game 3 matches
+    if (!matchId.endsWith("-3") && !matchId.endsWith("3")) return true;
+
+    // Find the series root
+    let seriesRoot;
+    if (
+        matchId.includes("-SF") ||
+        matchId.includes("-F-") ||
+        matchId.includes("-B-")
+    ) {
+        // Format: S-SF1-3 → S-SF1
+        seriesRoot = matchId.replace(/-\d+$/, "");
+    } else {
+        // Format: S-F3 → S-F, S-B3 → S-B
+        seriesRoot = matchId.replace(/\d+$/, "");
+    }
+
+    // Count wins in games 1 and 2
+    const seriesGames = allMatches.filter(
+        (m) =>
+            m.id.startsWith(seriesRoot) &&
+            m.status === "final" &&
+            !m.id.endsWith("3")
+    );
+
+    if (seriesGames.length < 2) return false; // Need both games 1,2 finished
+
+    const winCounts = {};
+    seriesGames.forEach((game) => {
+        if (game.score_a > game.score_b) {
+            winCounts[game.competitor_a.id] =
+                (winCounts[game.competitor_a.id] || 0) + 1;
+        } else if (game.score_b > game.score_a) {
+            winCounts[game.competitor_b.id] =
+                (winCounts[game.competitor_b.id] || 0) + 1;
+        }
+    });
+
+    // Show game 3 only if series is tied 1-1
+    const wins = Object.values(winCounts);
+    return wins.length === 2 && wins.every((w) => w === 1);
+}
+
 /* ----------  live listener per event ---------- */
 // Helper function to extract numeric part from match ID
 function extractMatchNumber(matchId) {
     // Extract number from IDs like "S-Q10", "D-F2", "S-SF1"
     const match = matchId.match(/(\d+)$/);
     return match ? parseInt(match[1]) : 0;
+}
+
+function getMatchPriority(matchId) {
+    // Order: Qualifiers → Semis → Bronze → Finals
+    if (matchId.includes("-Q")) return 1;
+    if (matchId.includes("-SF")) return 2;
+    if (matchId.includes("-B")) return 3;
+    if (matchId.includes("-F")) return 4;
+    return 5;
 }
 
 function listen(eventId) {
@@ -108,17 +188,35 @@ function listen(eventId) {
     );
 
     return onSnapshot(q, async (snap) => {
-        // Sort the results after fetching to fix the numbering
-        const sortedDocs = snap.docs.sort((a, b) => {
-            const aTime = a.data().scheduled_at.toMillis();
-            const bTime = b.data().scheduled_at.toMillis();
+        // Get all matches for filtering logic
+        const allMatches = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-            // If times are different, sort by time
-            if (aTime !== bTime) {
-                return aTime - bTime;
+        // Filter matches to show
+        const visibleMatches = allMatches.filter((match) => {
+            // Basic visibility check
+            if (!shouldShowMatch(match)) return false;
+
+            // Special handling for game 3
+            if (match.id.endsWith("-3") || match.id.endsWith("3")) {
+                return shouldShowGame3(match.id, allMatches);
             }
 
-            // If times are same, sort by match number
+            return true;
+        });
+
+        // Sort the visible matches
+        const sortedMatches = visibleMatches.sort((a, b) => {
+            // First by match type priority
+            const aPriority = getMatchPriority(a.id);
+            const bPriority = getMatchPriority(b.id);
+            if (aPriority !== bPriority) return aPriority - bPriority;
+
+            // Then by scheduled time
+            const aTime = a.scheduled_at.toMillis();
+            const bTime = b.scheduled_at.toMillis();
+            if (aTime !== bTime) return aTime - bTime;
+
+            // Finally by match number
             const aMatch = extractMatchNumber(a.id);
             const bMatch = extractMatchNumber(b.id);
             return aMatch - bMatch;
@@ -126,17 +224,16 @@ function listen(eventId) {
 
         const rows = [];
 
-        for (const d of sortedDocs) {
-            const m = d.data();
+        for (const match of sortedMatches) {
             const [red, blue] = await Promise.all([
-                teamName(m.competitor_a.id),
-                teamName(m.competitor_b.id),
+                teamName(match.competitor_a.id),
+                teamName(match.competitor_b.id),
             ]);
 
-            const isFinal = m.status === "final";
-            const aWin = isFinal && m.score_a > m.score_b;
-            const bWin = isFinal && m.score_b > m.score_a;
-            const tie = isFinal && m.score_a === m.score_b;
+            const isFinal = match.status === "final";
+            const aWin = isFinal && match.score_a > match.score_b;
+            const bWin = isFinal && match.score_b > match.score_a;
+            const tie = isFinal && match.score_a === match.score_b;
 
             /* cell-level background */
             const cellColour = (winner, loser) =>
@@ -153,14 +250,14 @@ function listen(eventId) {
 
             rows.push(`
         <tr class="even:bg-gray-50 text-center">
-          ${td(`#${d.id}`)}
-          ${td(fmtDT(m.scheduled_at.toDate()))}
+          ${td(`#${match.id}`)}
+          ${td(fmtDT(match.scheduled_at.toDate()))}
           ${teamTd(red, aWin, aCls)}
-          ${scoreTd(m.score_a, aWin, aCls)}
+          ${scoreTd(match.score_a, aWin, aCls)}
           ${teamTd(blue, bWin, bCls)}
-          ${scoreTd(m.score_b, bWin, bCls)}
-          ${td(m.venue || "–", "text-center")}
-          ${td(badge(m.status), "text-center")}
+          ${scoreTd(match.score_b, bWin, bCls)}
+          ${td(match.venue || "–", "text-center")}
+          ${td(badge(match.status), "text-center")}
         </tr>`);
         }
 

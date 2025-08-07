@@ -1,8 +1,11 @@
-/*  public/js/scorekeeper.js  (v 6)
+/*  public/js/scorekeeper.js  (v 7)
     ----------------------------------------------------------------
+    + Smart match filtering: shows upcoming/live matches, hides finished
+    + Progressive reveal: only shows matches when competitors are confirmed
+    + Auto-refresh: updates match list without page reload
     + Event selector → filters the match list
     + remembers last event & match in sessionStorage
-    + keeps all previous v5 features (swap-sides lock, live sync, …)
+    + keeps all previous features (swap-sides lock, live sync, …)
 ------------------------------------------------------------------ */
 
 import {
@@ -39,6 +42,7 @@ const end = $("endBtn");
 /* state */
 let docRef = null; // current match doc ref
 let unsubLive = null; // listener to that doc
+let unsubMatchList = null; // listener to match list
 let interval = null; // countdown ticker
 let flipped = false; // UI orientation
 let origRed = "",
@@ -57,13 +61,104 @@ const err = (t) => {
     msg.classList.remove("hidden");
 };
 
+/* ───── progressive reveal helpers ───── */
+function isPlaceholder(teamId) {
+    if (!teamId) return true;
+    // Check for placeholder patterns like SFW1, SFW2, SBW1, SBW2, etc.
+    return teamId.match(/^[SD][FB]W\d+$/);
+}
+
+function shouldShowMatch(match, allMatches) {
+    const { competitor_a, competitor_b, match_type, status } = match;
+
+    // Always show qualifiers that aren't finished
+    if (match_type === "qualifier") {
+        return status !== "final";
+    }
+
+    // Don't show voided matches
+    if (status === "void") return false;
+
+    // For series matches (semi/bronze/final):
+    // 1. Show if live or scheduled with real competitors
+    // 2. Hide if finished
+    // 3. Hide if still has placeholders (not ready yet)
+
+    if (status === "final") return false; // Hide finished matches
+
+    const bothConfirmed =
+        !isPlaceholder(competitor_a?.id) && !isPlaceholder(competitor_b?.id);
+
+    // Show if both teams are confirmed OR if it's already live
+    return bothConfirmed || status === "live";
+}
+
+function shouldShowGame3(matchId, allMatches) {
+    // Only check game 3 matches
+    if (!matchId.endsWith("-3") && !matchId.endsWith("3")) return true;
+
+    // Find the series root
+    let seriesRoot;
+    if (
+        matchId.includes("-SF") ||
+        matchId.includes("-F-") ||
+        matchId.includes("-B-")
+    ) {
+        // Format: S-SF1-3 → S-SF1
+        seriesRoot = matchId.replace(/-\d+$/, "");
+    } else {
+        // Format: S-F3 → S-F, S-B3 → S-B
+        seriesRoot = matchId.replace(/\d+$/, "");
+    }
+
+    // Count wins in games 1 and 2
+    const seriesGames = allMatches.filter(
+        (m) =>
+            m.id.startsWith(seriesRoot) &&
+            m.status === "final" &&
+            !m.id.endsWith("3")
+    );
+
+    if (seriesGames.length < 2) return false; // Need both games 1,2 finished
+
+    const winCounts = {};
+    seriesGames.forEach((game) => {
+        if (game.score_a > game.score_b) {
+            winCounts[game.competitor_a.id] =
+                (winCounts[game.competitor_a.id] || 0) + 1;
+        } else if (game.score_b > game.score_a) {
+            winCounts[game.competitor_b.id] =
+                (winCounts[game.competitor_b.id] || 0) + 1;
+        }
+    });
+
+    // Show game 3 only if series is tied 1-1
+    const wins = Object.values(winCounts);
+    return wins.length === 2 && wins.every((w) => w === 1);
+}
+
+function getMatchPriority(matchId) {
+    // Order: Live → Qualifiers → Semis → Bronze → Finals
+    if (matchId.includes("-Q")) return 1;
+    if (matchId.includes("-SF")) return 2;
+    if (matchId.includes("-B")) return 3;
+    if (matchId.includes("-F")) return 4;
+    return 5;
+}
+
+function getMatchStatus(match) {
+    if (match.status === "live") return "🔴 LIVE";
+    if (match.status === "scheduled") return "⏰ Upcoming";
+    return match.status;
+}
+
 /* ───── auth gate ───── */
 onAuthStateChanged(auth, async (user) => {
     if (!user) return err("Please log in.");
     if ((await user.getIdTokenResult()).claims.role !== "scorekeeper")
         return err("Not a score-keeper account.");
-    await populateEventDropdown(); // NEW
-    resumeIfAny(); // try restore last event/match
+    await populateEventDropdown();
+    resumeIfAny();
 });
 
 /* ───── 1. populate Event dropdown ───── */
@@ -80,61 +175,112 @@ async function populateEventDropdown() {
         });
 }
 
-/* ───── 2. rebuild Match dropdown whenever Event changes ───── */
+/* ───── 2. rebuild Match dropdown with live updates ───── */
 async function refreshMatchDropdown(eventId) {
+    // Clean up previous listener
+    if (unsubMatchList) {
+        unsubMatchList();
+        unsubMatchList = null;
+    }
+
     sel.innerHTML = "";
     load.disabled = true;
     hidePanel();
 
-    if (!eventId) return; // "Choose an event…"
+    if (!eventId) return;
 
+    // Set up live listener for matches
     const q = query(
         collection(db, "matches"),
         where("event_id", "==", eventId),
-        where("status", "in", ["scheduled", "live"]),
         orderBy("scheduled_at")
     );
-    const snap = await getDocs(q);
 
-    if (!snap.size) {
-        sel.insertAdjacentHTML(
-            "beforeend",
-            `<option value="">No matches available</option>`
-        );
-        return;
-    }
+    unsubMatchList = onSnapshot(q, (snap) => {
+        const allMatches = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    // Sort the results to fix match numbering
-    const sortedDocs = snap.docs.sort((a, b) => {
-        const aTime = a.data().scheduled_at.toMillis();
-        const bTime = b.data().scheduled_at.toMillis();
+        // Filter matches to show
+        const visibleMatches = allMatches.filter((match) => {
+            // Basic visibility check
+            if (!shouldShowMatch(match, allMatches)) return false;
 
-        // If times are different, sort by time
-        if (aTime !== bTime) {
-            return aTime - bTime;
+            // Special handling for game 3
+            if (match.id.endsWith("-3") || match.id.endsWith("3")) {
+                return shouldShowGame3(match.id, allMatches);
+            }
+
+            return true;
+        });
+
+        // Sort matches: Live first, then by priority, then by time, then by number
+        const sortedMatches = visibleMatches.sort((a, b) => {
+            // Live matches first
+            if (a.status === "live" && b.status !== "live") return -1;
+            if (b.status === "live" && a.status !== "live") return 1;
+
+            // Then by match type priority
+            const aPriority = getMatchPriority(a.id);
+            const bPriority = getMatchPriority(b.id);
+            if (aPriority !== bPriority) return aPriority - bPriority;
+
+            // Then by scheduled time
+            const aTime = a.scheduled_at.toMillis();
+            const bTime = b.scheduled_at.toMillis();
+            if (aTime !== bTime) return aTime - bTime;
+
+            // Finally by match number
+            const aMatch = extractMatchNumber(a.id);
+            const bMatch = extractMatchNumber(b.id);
+            return aMatch - bMatch;
+        });
+
+        // Remember current selection
+        const currentSelection = sel.value;
+
+        // Clear and repopulate dropdown
+        sel.innerHTML = "";
+
+        if (sortedMatches.length === 0) {
+            sel.insertAdjacentHTML(
+                "beforeend",
+                `<option value="">No matches available</option>`
+            );
+            load.disabled = true;
+            return;
         }
 
-        // If times are same, sort by match number
-        const aMatch = extractMatchNumber(a.id);
-        const bMatch = extractMatchNumber(b.id);
-        return aMatch - bMatch;
-    });
+        sortedMatches.forEach((match) => {
+            const statusIcon = getMatchStatus(match);
+            const teamA = match.competitor_a?.id || "TBD";
+            const teamB = match.competitor_b?.id || "TBD";
 
-    sortedDocs.forEach((d) => {
-        const m = d.data();
-        sel.insertAdjacentHTML(
-            "beforeend",
-            `<option value="${d.id}">${d.id} – ${fmt(m.scheduled_at)} – ${
-                m.venue
-            }</option>`
-        );
-    });
+            sel.insertAdjacentHTML(
+                "beforeend",
+                `<option value="${match.id}">
+                    ${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${
+                    match.venue
+                } (${teamA} vs ${teamB})
+                </option>`
+            );
+        });
 
-    sel.selectedIndex = 0;
-    load.disabled = false;
+        // Restore selection if still available
+        if (
+            currentSelection &&
+            Array.from(sel.options).some(
+                (opt) => opt.value === currentSelection
+            )
+        ) {
+            sel.value = currentSelection;
+        } else {
+            sel.selectedIndex = 0;
+        }
+
+        load.disabled = !sel.value;
+    });
 }
 
-// Helper function to extract numeric part from match ID (add this near the top)
+// Helper function to extract numeric part from match ID
 function extractMatchNumber(matchId) {
     // Extract number from IDs like "S-Q10", "D-F2", "S-SF1"
     const match = matchId.match(/(\d+)$/);
@@ -149,12 +295,22 @@ sel.addEventListener("change", () => (load.disabled = !sel.value));
 async function resumeIfAny() {
     const lastEvt = sessionStorage.getItem("currentEvent");
     const lastMatch = sessionStorage.getItem("currentMatch");
-    if (!lastEvt || !lastMatch) return;
+    if (!lastEvt) return;
 
     evt.value = lastEvt;
     await refreshMatchDropdown(lastEvt);
-    sel.value = lastMatch;
-    if (sel.value) loadMatch(lastMatch, true);
+
+    if (lastMatch) {
+        // Wait a bit for the dropdown to populate
+        setTimeout(() => {
+            if (
+                Array.from(sel.options).some((opt) => opt.value === lastMatch)
+            ) {
+                sel.value = lastMatch;
+                loadMatch(lastMatch, true);
+            }
+        }, 100);
+    }
 }
 
 /* ───── load / display a match ───── */
@@ -174,6 +330,11 @@ async function loadMatch(id, silent = false) {
         query(collection(db, "matches"), where("__name__", "==", id))
     );
     const d = snap.docs[0];
+    if (!d) {
+        err("Match not found");
+        return;
+    }
+
     docRef = d.ref;
 
     /* remember in session */
@@ -333,3 +494,9 @@ function hidePanel() {
         interval = null;
     }
 }
+
+// Cleanup on page unload
+window.addEventListener("beforeunload", () => {
+    if (unsubLive) unsubLive();
+    if (unsubMatchList) unsubMatchList();
+});
