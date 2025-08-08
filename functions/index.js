@@ -83,18 +83,18 @@ const EVENT_FORMATS = {
         finals: ["F1", "F2", "F3"],
         bronze: ["B1", "B2", "B3"],
     },
+    basketball3v3: {
+        type: "single",
+        prefix: "B",
+        finals: ["F1"],
+        bronze: ["B1"],
+    },
     // TODO: Uncomment and modify these when other sports are confirmed
     // frisbee: {
     //     type: "single",
     //     prefix: "F",
     //     finals: ["F1"],
     //     bronze: ["B1"],
-    // },
-    // basketball: {
-    //     type: "bo3",
-    //     prefix: "B",
-    //     finals: ["F1", "F2", "F3"],
-    //     bronze: ["B1", "B2", "B3"],
     // },
 };
 
@@ -290,7 +290,7 @@ exports.autoFillAwards = functions.firestore
 
         const matchSuffix = parts[1]; // "F1", "FINAL", "BRONZE", etc.
 
-        // Determine if this is finals or bronze series
+        // Determine if this is finals or bronze match
         let seriesType = null;
         if (config.finals.includes(matchSuffix)) {
             seriesType = "finals";
@@ -300,38 +300,90 @@ exports.autoFillAwards = functions.firestore
             return null; // not a finals/bronze match
         }
 
+        console.log(`🏆 Processing ${sport} ${seriesType} match: ${gameID}`);
+
         try {
-            // Check if the series is now decided
-            const series = await seriesState(sport, seriesType);
-            if (!series.decided) {
-                console.log(`${sport} ${seriesType} series not yet decided`);
-                return null;
+            // Handle single-game vs series formats differently
+            if (config.type === "single") {
+                // Single-game format: this match result IS the series result
+                const aId = after.competitor_a?.id;
+                const bId = after.competitor_b?.id;
+
+                if (
+                    !aId ||
+                    !bId ||
+                    typeof after.score_a !== "number" ||
+                    typeof after.score_b !== "number"
+                ) {
+                    console.log(`❌ Invalid match data for ${gameID}`);
+                    return null;
+                }
+
+                const winnerId = after.score_a > after.score_b ? aId : bId;
+                const loserId = winnerId === aId ? bId : aId;
+
+                const winnerRef = { id: winnerId };
+                const loserRef = { id: loserId };
+
+                // Build the awards object based on match type
+                const awardSlots =
+                    seriesType === "finals"
+                        ? {
+                              champion: winnerRef,
+                              first_runner_up: loserRef,
+                          }
+                        : {
+                              second_runner_up: winnerRef,
+                          };
+
+                // Update the awards document
+                await db.doc(`awards/${sport}`).set(
+                    {
+                        ...awardSlots,
+                        updated_at: FieldValue.serverTimestamp(),
+                        published: false,
+                    },
+                    { merge: true }
+                );
+
+                console.log(
+                    `✅ [autoFillAwards] ${sport} – ${seriesType} single match decided, awards updated`
+                );
+            } else {
+                // Series format (bo3, bo5): check if the series is now decided
+                const series = await seriesState(sport, seriesType);
+                if (!series.decided) {
+                    console.log(
+                        `${sport} ${seriesType} series not yet decided`
+                    );
+                    return null;
+                }
+
+                // Build the awards object based on series type
+                const awardSlots =
+                    seriesType === "finals"
+                        ? {
+                              champion: series.winnerRef,
+                              first_runner_up: series.loserRef,
+                          }
+                        : {
+                              second_runner_up: series.winnerRef,
+                          };
+
+                // Update the awards document
+                await db.doc(`awards/${sport}`).set(
+                    {
+                        ...awardSlots,
+                        updated_at: FieldValue.serverTimestamp(),
+                        published: false,
+                    },
+                    { merge: true }
+                );
+
+                console.log(
+                    `✅ [autoFillAwards] ${sport} – ${seriesType} series decided, awards updated`
+                );
             }
-
-            // Build the awards object based on series type
-            const awardSlots =
-                seriesType === "finals"
-                    ? {
-                          champion: series.winnerRef,
-                          first_runner_up: series.loserRef,
-                      }
-                    : {
-                          second_runner_up: series.winnerRef,
-                      };
-
-            // Update the awards document
-            await db.doc(`awards/${sport}`).set(
-                {
-                    ...awardSlots,
-                    updated_at: FieldValue.serverTimestamp(),
-                    published: false,
-                },
-                { merge: true }
-            );
-
-            console.log(
-                `✅ [autoFillAwards] ${sport} – ${seriesType} series decided, awards updated`
-            );
         } catch (error) {
             console.error(
                 `❌ [autoFillAwards] Error processing ${sport} ${seriesType}:`,
@@ -364,7 +416,7 @@ exports.publishAwards = functions.firestore
         return null;
     });
 
-/* ───────── revealSemis – generate SF brackets when all qualifiers are done ─────────
+/* ───────── revealSemis (badminton) – generate SF brackets when all qualifiers are done ─────────
    Flow:
    1. Fires on any qualifier going live ➜ final.
    2. Checks if *every* qualifier in the same event is now final.
@@ -504,7 +556,131 @@ exports.revealSemis = functions.firestore
         return null;
     });
 
-/* ───────── seriesWatcher – progresses BO3 series & hides un-needed G3 ─────────
+/* ───────── revealBasketballElims – build QFs when all qualifiers are done ─────────
+   Pools A/B/C/D, tiebreaker = wins → point-diff.
+   Seeds = [W1=A1, W2=A2, W3=B1, W4=B2, W5=C1, W6=C2, W7=D1, W8=D2]
+   QFs:
+     QF1: W1 v W8 (Court 1, 17:20)
+     QF2: W2 v W7 (Court 2, 17:20)
+     QF3: W3 v W6 (Court 1, 17:30)
+     QF4: W4 v W5 (Court 2, 17:30)
+-------------------------------------------------------------------------------*/
+exports.revealBasketballElims = functions.firestore
+    .document("matches/{matchId}")
+    .onUpdate(async (chg, ctx) => {
+        const before = chg.before.data();
+        const after = chg.after.data();
+
+        if (!(before.status === "live" && after.status === "final"))
+            return null;
+        if (after.event_id !== "basketball3v3") return null;
+        if (after.match_type !== "qualifier") return null;
+
+        // 1) pull ALL qualifiers for basketball3v3
+        const qualsSnap = await db
+            .collection("matches")
+            .where("event_id", "==", "basketball3v3")
+            .where("match_type", "==", "qualifier")
+            .get();
+
+        const unfinished = qualsSnap.docs.filter(
+            (d) => d.data().status !== "final"
+        );
+        if (unfinished.length) {
+            console.log(`⏳ BB3v3: ${unfinished.length} qualifiers remaining`);
+            return null;
+        }
+
+        // 2) standings per pool (wins → point-diff)
+        const pools = {}; // { A:{team:{wins,diff}}, B:{…}, C:{…}, D:{…} }
+        for (const doc of qualsSnap.docs) {
+            const d = doc.data();
+            const pool = d.pool; // expect "A"|"B"|"C"|"D"
+            if (!pool) continue;
+            pools[pool] ??= {};
+            const a = d.competitor_a.id,
+                b = d.competitor_b.id;
+            const sa = d.score_a,
+                sb = d.score_b;
+
+            const upd = (id, win, diff) => {
+                const t = pools[pool][id] ?? { wins: 0, diff: 0 };
+                t.wins += win;
+                t.diff += diff;
+                pools[pool][id] = t;
+            };
+
+            if (sa > sb) {
+                upd(a, 1, sa - sb);
+                upd(b, 0, sb - sa);
+            } else if (sb > sa) {
+                upd(b, 1, sb - sa);
+                upd(a, 0, sa - sb);
+            } else {
+                upd(a, 0, 0);
+                upd(b, 0, 0);
+            } // ties unlikely
+        }
+
+        const rank = (obj) =>
+            Object.entries(obj)
+                .sort(([, A], [, B]) => B.wins - A.wins || B.diff - A.diff)
+                .map(([id]) => id);
+
+        const A = rank(pools["A"] || {}),
+            B = rank(pools["B"] || {}),
+            C = rank(pools["C"] || {}),
+            D = rank(pools["D"] || {});
+
+        if ([A, B, C, D].some((arr) => arr.length < 2)) {
+            console.error("❌ BB3v3 pools incomplete, cannot seed QFs");
+            return null;
+        }
+
+        // 3) seeds → W1..W8
+        const W1 = A[0],
+            W2 = A[1],
+            W3 = B[0],
+            W4 = B[1],
+            W5 = C[0],
+            W6 = C[1],
+            W7 = D[0],
+            W8 = D[1];
+        console.log("🏀 Seeds:", { W1, W2, W3, W4, W5, W6, W7, W8 });
+
+        // 4) write QF teams (idempotent)
+        const qfMap = {
+            "B-QF1": { a: W1, b: W8 },
+            "B-QF2": { a: W2, b: W7 },
+            "B-QF3": { a: W3, b: W6 },
+            "B-QF4": { a: W4, b: W5 },
+        };
+
+        const batch = db.batch();
+        for (const [id, { a, b }] of Object.entries(qfMap)) {
+            const ref = db.doc(`matches/${id}`);
+            const snap = await ref.get();
+            if (!snap.exists) {
+                console.error(`❌ Missing QF doc ${id}`);
+                continue;
+            }
+            const d = snap.data();
+            // If already correct, skip
+            if (d.competitor_a?.id === a && d.competitor_b?.id === b) continue;
+            batch.update(ref, {
+                competitor_a: { id: a },
+                competitor_b: { id: b },
+                score_a: null,
+                score_b: null,
+                status: "scheduled",
+            });
+        }
+        await batch.commit();
+        console.log("✅ BB3v3: QFs revealed/updated");
+        return null;
+    });
+
+/* ───────── seriesWatcher (badminton) – progresses BO3 series & hides un-needed G3 ─────────
    ① Trigger: any series match ("semi" | "bronze" | "final") moves   live ➜ final
    ② When a team reaches 2 wins (best-of-3) it:
       • Removes game-3 placeholder if it hasn't started
@@ -719,6 +895,91 @@ exports.seriesWatcher = functions.firestore
         } catch (error) {
             console.error(`❌ Error committing batch:`, error);
             throw error;
+        }
+
+        return null;
+    });
+
+/* ───────── advanceBasketballElims – single-game bracket progression ─────────
+   Triggers when a B-QF* or B-SF* flips live ➜ final:
+     • QF1 → SF1.A, QF2 → SF1.B, QF3 → SF2.A, QF4 → SF2.B
+     • SF winners → F1.A / F1.B, losers → B1.A / B1.B
+-------------------------------------------------------------------------------*/
+exports.advanceBasketballElims = functions.firestore
+    .document("matches/{matchId}")
+    .onUpdate(async (chg, ctx) => {
+        const before = chg.before.data();
+        const after = chg.after.data();
+
+        if (!(before.status === "live" && after.status === "final"))
+            return null;
+        if (after.event_id !== "basketball3v3") return null;
+        if (!["qf", "semi"].includes(after.match_type)) return null;
+
+        const id = ctx.params.matchId;
+        const aId = after.competitor_a?.id,
+            bId = after.competitor_b?.id;
+        if (
+            typeof after.score_a !== "number" ||
+            typeof after.score_b !== "number"
+        )
+            return null;
+        if (!aId || !bId) return null;
+
+        const winnerId = after.score_a > after.score_b ? aId : bId;
+        const loserId = winnerId === aId ? bId : aId;
+
+        const batch = db.batch();
+
+        // QFs: route winners to SF slots
+        const qfMatch = id.match(/^B-QF([1-4])$/);
+        if (qfMatch) {
+            const n = Number(qfMatch[1]);
+            if (n === 1)
+                batch.update(db.doc("matches/B-SF1"), {
+                    competitor_a: { id: winnerId },
+                });
+            if (n === 2)
+                batch.update(db.doc("matches/B-SF1"), {
+                    competitor_b: { id: winnerId },
+                });
+            if (n === 3)
+                batch.update(db.doc("matches/B-SF2"), {
+                    competitor_a: { id: winnerId },
+                });
+            if (n === 4)
+                batch.update(db.doc("matches/B-SF2"), {
+                    competitor_b: { id: winnerId },
+                });
+            await batch.commit();
+            console.log(`🏀 QF${n} → advanced ${winnerId} into SF`);
+            return null;
+        }
+
+        // SFs: winners → Final, losers → Bronze
+        const sfMatch = id.match(/^B-SF([1-2])$/);
+        if (sfMatch) {
+            const n = Number(sfMatch[1]);
+            if (n === 1) {
+                batch.update(db.doc("matches/B-F1"), {
+                    competitor_a: { id: winnerId },
+                });
+                batch.update(db.doc("matches/B-B1"), {
+                    competitor_a: { id: loserId },
+                });
+            } else {
+                batch.update(db.doc("matches/B-F1"), {
+                    competitor_b: { id: winnerId },
+                });
+                batch.update(db.doc("matches/B-B1"), {
+                    competitor_b: { id: loserId },
+                });
+            }
+            await batch.commit();
+            console.log(
+                `🏀 SF${n} → F1/B1 updated (W=${winnerId}, L=${loserId})`
+            );
+            return null;
         }
 
         return null;

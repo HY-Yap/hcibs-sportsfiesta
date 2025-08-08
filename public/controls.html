@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Sports Fiesta - Admin Controls</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: "#1e40af",
+                            "primary-dark": "#1e3a8a",
+                        },
+                    },
+                },
+            };
+        </script>
+        <!-- Papa Parse for CSV handling -->
+        <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+        <!-- Font Awesome for icons -->
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        />
+    </head>
+    <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+        <!-- Navigation -->
+        <div id="nav-placeholder"></div>
+
+        <!-- Main Content -->
+        <div class="container mx-auto px-4 py-6 max-w-6xl">
+            <!-- Page Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+                    <i class="fas fa-cogs text-primary mr-3"></i>
+                    Admin Controls
+                </h1>
+                <p class="text-gray-600 text-sm md:text-base">
+                    Manage tournament data and system settings
+                </p>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Quick Stats Cards -->
+                <div
+                    class="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+                >
+                    <div class="flex items-center">
+                        <div class="p-3 bg-blue-100 rounded-lg">
+                            <i class="fas fa-users text-blue-600 text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">
+                                Total Players
+                            </p>
+                            <p
+                                class="text-2xl font-bold text-gray-900"
+                                id="playerCount"
+                            >
+                                -
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+                >
+                    <div class="flex items-center">
+                        <div class="p-3 bg-green-100 rounded-lg">
+                            <i
+                                class="fas fa-users-cog text-green-600 text-xl"
+                            ></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">
+                                Total Teams
+                            </p>
+                            <p
+                                class="text-2xl font-bold text-gray-900"
+                                id="teamCount"
+                            >
+                                -
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+                >
+                    <div class="flex items-center">
+                        <div class="p-3 bg-purple-100 rounded-lg">
+                            <i
+                                class="fas fa-trophy text-purple-600 text-xl"
+                            ></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">
+                                Active Events
+                            </p>
+                            <p
+                                class="text-2xl font-bold text-gray-900"
+                                id="eventCount"
+                            >
+                                -
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- CSV Upload Section -->
+                <div
+                    class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                >
+                    <div
+                        class="bg-gradient-to-r from-primary to-primary-dark px-6 py-4"
+                    >
+                        <h2
+                            class="text-xl font-semibold text-white flex items-center"
+                        >
+                            <i class="fas fa-upload mr-3"></i>
+                            CSV Data Upload
+                        </h2>
+                        <p class="text-blue-100 text-sm mt-1">
+                            Import players and teams from CSV files
+                        </p>
+                    </div>
+
+                    <div class="p-6 space-y-6">
+                        <!-- File Upload Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Players CSV Upload -->
+                            <div class="group">
+                                <label class="block">
+                                    <span
+                                        class="text-sm font-medium text-gray-700 mb-2 block"
+                                    >
+                                        <i
+                                            class="fas fa-user mr-2 text-blue-500"
+                                        ></i>
+                                        Players CSV
+                                    </span>
+                                    <div class="relative">
+                                        <input
+                                            id="csvPlayers"
+                                            type="file"
+                                            accept=".csv"
+                                            class="hidden"
+                                        />
+                                        <div
+                                            id="playersDropZone"
+                                            class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 group-hover:border-blue-400"
+                                        >
+                                            <i
+                                                class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"
+                                            ></i>
+                                            <p class="text-sm text-gray-600">
+                                                <span
+                                                    class="font-medium text-blue-600"
+                                                    >Click to upload</span
+                                                >
+                                                or drag and drop
+                                            </p>
+                                            <p
+                                                class="text-xs text-gray-500 mt-1"
+                                            >
+                                                CSV files only
+                                            </p>
+                                        </div>
+                                    </div>
+                                </label>
+                                <div
+                                    id="playersStatus"
+                                    class="mt-2 text-sm"
+                                ></div>
+                            </div>
+
+                            <!-- Teams CSV Upload -->
+                            <div class="group">
+                                <label class="block">
+                                    <span
+                                        class="text-sm font-medium text-gray-700 mb-2 block"
+                                    >
+                                        <i
+                                            class="fas fa-users mr-2 text-green-500"
+                                        ></i>
+                                        Teams CSV
+                                    </span>
+                                    <div class="relative">
+                                        <input
+                                            id="csvTeams"
+                                            type="file"
+                                            accept=".csv"
+                                            class="hidden"
+                                        />
+                                        <div
+                                            id="teamsDropZone"
+                                            class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition-all duration-200 group-hover:border-green-400"
+                                        >
+                                            <i
+                                                class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"
+                                            ></i>
+                                            <p class="text-sm text-gray-600">
+                                                <span
+                                                    class="font-medium text-green-600"
+                                                    >Click to upload</span
+                                                >
+                                                or drag and drop
+                                            </p>
+                                            <p
+                                                class="text-xs text-gray-500 mt-1"
+                                            >
+                                                CSV files only
+                                            </p>
+                                        </div>
+                                    </div>
+                                </label>
+                                <div
+                                    id="teamsStatus"
+                                    class="mt-2 text-sm"
+                                ></div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <button
+                                id="btnValidate"
+                                class="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                disabled
+                            >
+                                <i class="fas fa-check-circle mr-2"></i>
+                                Validate Data
+                            </button>
+                            <button
+                                id="btnClear"
+                                class="px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 font-medium flex items-center justify-center"
+                            >
+                                <i class="fas fa-times mr-2"></i>
+                                Clear All
+                            </button>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div id="progressContainer" class="hidden">
+                            <div
+                                class="flex justify-between text-sm text-gray-600 mb-2"
+                            >
+                                <span>Processing...</span>
+                                <span id="progressText">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                    id="progressBar"
+                                    class="bg-primary h-2 rounded-full transition-all duration-300"
+                                    style="width: 0%"
+                                ></div>
+                            </div>
+                        </div>
+
+                        <!-- Inline Status Messages -->
+                        <div id="csvStatus" class="text-sm space-y-2 hidden">
+                            <div
+                                class="bg-blue-50 border border-blue-200 rounded p-3"
+                            >
+                                <h4 class="font-medium text-blue-900 mb-2">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    Upload Status
+                                </h4>
+                                <div
+                                    id="statusMessages"
+                                    class="text-blue-800 text-sm"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div
+                    class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                >
+                    <div
+                        class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4"
+                    >
+                        <h2
+                            class="text-xl font-semibold text-white flex items-center"
+                        >
+                            <i class="fas fa-server mr-3"></i>
+                            System Status
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div
+                                class="flex items-center justify-between py-2 border-b border-gray-100"
+                            >
+                                <span class="text-gray-600"
+                                    >Database Connection</span
+                                >
+                                <span
+                                    id="dbStatus"
+                                    class="px-2 py-1 bg-gray-200 text-gray-700 rounded text-sm"
+                                >
+                                    <i
+                                        class="fas fa-circle text-gray-400 mr-1"
+                                    ></i>
+                                    Checking...
+                                </span>
+                            </div>
+                            <div
+                                class="flex items-center justify-between py-2 border-b border-gray-100"
+                            >
+                                <span class="text-gray-600"
+                                    >Authentication</span
+                                >
+                                <span
+                                    id="authStatus"
+                                    class="px-2 py-1 bg-gray-200 text-gray-700 rounded text-sm"
+                                >
+                                    <i
+                                        class="fas fa-circle text-gray-400 mr-1"
+                                    ></i>
+                                    Checking...
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between py-2">
+                                <span class="text-gray-600"
+                                    >Admin Privileges</span
+                                >
+                                <span
+                                    id="adminStatus"
+                                    class="px-2 py-1 bg-gray-200 text-gray-700 rounded text-sm"
+                                >
+                                    <i
+                                        class="fas fa-circle text-gray-400 mr-1"
+                                    ></i>
+                                    Checking...
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div
+            id="loadingOverlay"
+            class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        >
+            <div class="bg-white rounded-lg p-6 text-center">
+                <div
+                    class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"
+                ></div>
+                <p class="text-gray-600">Processing data...</p>
+            </div>
+        </div>
+
+        <!-- Scripts -->
+        <script src="js/include-nav.js"></script>
+        <script src="js/firebase-init.js" type="module"></script>
+        <script src="js/auth.js" type="module"></script>
+        <script type="module" src="/js/admin-csv.js"></script>
+
+        <!-- Enhanced Interactivity -->
+        <script>
+            // Drag and drop functionality
+            function setupDragDrop(dropZoneId, inputId) {
+                const dropZone = document.getElementById(dropZoneId);
+                const input = document.getElementById(inputId);
+
+                dropZone.addEventListener("click", () => input.click());
+
+                ["dragenter", "dragover", "dragleave", "drop"].forEach(
+                    (eventName) => {
+                        dropZone.addEventListener(
+                            eventName,
+                            preventDefaults,
+                            false
+                        );
+                    }
+                );
+
+                ["dragenter", "dragover"].forEach((eventName) => {
+                    dropZone.addEventListener(eventName, highlight, false);
+                });
+
+                ["dragleave", "drop"].forEach((eventName) => {
+                    dropZone.addEventListener(eventName, unhighlight, false);
+                });
+
+                dropZone.addEventListener("drop", handleDrop, false);
+
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                function highlight(e) {
+                    dropZone.classList.add("border-primary", "bg-blue-50");
+                }
+
+                function unhighlight(e) {
+                    dropZone.classList.remove("border-primary", "bg-blue-50");
+                }
+
+                function handleDrop(e) {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files.length > 0) {
+                        input.files = files;
+                        input.dispatchEvent(
+                            new Event("change", { bubbles: true })
+                        );
+                    }
+                }
+            }
+
+            // Initialize drag and drop
+            setupDragDrop("playersDropZone", "csvPlayers");
+            setupDragDrop("teamsDropZone", "csvTeams");
+
+            // Clear button functionality
+            // In the clear button event listener, add these lines:
+            document
+                .getElementById("btnClear")
+                .addEventListener("click", () => {
+                    document.getElementById("csvPlayers").value = "";
+                    document.getElementById("csvTeams").value = "";
+                    document.getElementById("playersStatus").innerHTML = "";
+                    document.getElementById("teamsStatus").innerHTML = "";
+                    document
+                        .getElementById("csvStatus")
+                        .classList.add("hidden");
+                    document.getElementById("btnValidate").disabled = true;
+
+                    // ✅ Add these lines to reset progress:
+                    document
+                        .getElementById("progressContainer")
+                        .classList.add("hidden");
+                    document.getElementById("progressBar").style.width = "0%";
+                    document.getElementById("progressText").textContent = "0%";
+                    document
+                        .getElementById("progressBar")
+                        .classList.remove("bg-green-500");
+                });
+        </script>
+    </body>
+</html>

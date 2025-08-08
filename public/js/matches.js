@@ -62,43 +62,81 @@ const badge = (st) => {
 /* ----------  table shell ---------- */
 function shell(rowsHtml) {
     return `
-  <div class="overflow-x-auto">
-    <table class="min-w-full table-fixed whitespace-nowrap text-sm">
-      <thead class="bg-primary text-white">
-        <tr>
-          <th class="w-20  px-2 py-1">Match</th>
-          <th class="w-44  px-2 py-1">Date&nbsp;Time</th>
-          <th          class="px-2 py-1">Player/Team&nbsp;1</th>
-          <th class="w-16  px-2 py-1 text-center">Score</th>
-          <th          class="px-2 py-1">Player/Team&nbsp;2</th>
-          <th class="w-16  px-2 py-1 text-center">Score</th>
-          <th class="w-20  px-2 py-1 text-center">Venue</th>
-          <th class="w-24  px-2 py-1 text-center">Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${
-            rowsHtml ||
-            `
-          <tr>
-            <td colspan="8" class="p-4 text-center text-gray-500">
-              No matches.
-            </td>
-          </tr>`
-        }
-      </tbody>
-    </table>
-  </div>`;
+    <div class="overflow-x-auto">
+        <table class="min-w-full table-fixed whitespace-nowrap text-sm">
+            <thead class="bg-primary text-white">
+                <tr>
+                <th class="w-20  px-2 py-1">Match</th>
+                <th class="w-44  px-2 py-1">Date&nbsp;Time</th>
+                <th          class="px-2 py-1">Player/Team&nbsp;1</th>
+                <th class="w-16  px-2 py-1 text-center">Score</th>
+                <th          class="px-2 py-1">Player/Team&nbsp;2</th>
+                <th class="w-16  px-2 py-1 text-center">Score</th>
+                <th class="w-20  px-2 py-1 text-center">Venue</th>
+                <th class="w-24  px-2 py-1 text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${
+                    rowsHtml ||
+                    `
+                <tr>
+                    <td colspan="8" class="p-4 text-center text-gray-500">
+                    No matches.
+                    </td>
+                </tr>`
+                }
+            </tbody>
+        </table>
+    </div>`;
 }
 
 /* ----------  progressive reveal helpers ---------- */
 function isPlaceholder(teamId) {
     if (!teamId) return true;
-    // Check for placeholder patterns like SFW1, SFW2, SBW1, SBW2, etc.
-    return teamId.match(/^[SD][FB]W\d+$/);
+
+    // Badminton finals/bronze placeholders: SFW1, SBW2, DFW1, DBW2
+    if (/^(?:S|D)[FB]W\d+$/.test(teamId)) return true;
+
+    // Basketball QF seeding placeholders: BW1..BW8
+    if (/^BW[1-8]$/.test(teamId)) return true;
+
+    // Basketball progression placeholders: BQF1W, BQF2W, BQF3W, BQF4W, BSF1W, BSF2W, BSF1L, BSF2L
+    if (/^B(?:QF[1-4]W|SF[12][WL])$/.test(teamId)) return true;
+
+    // (Optional) also hide badminton semi placeholders S1..S4 / D1..D4
+    if (/^(?:S|D)[1-4]$/.test(teamId)) return true;
+
+    return false;
 }
 
-function shouldShowMatch(match) {
+function depsSatisfied(match, all) {
+    const statusOf = (id) => all.find((m) => m.id === id)?.status;
+
+    // ── Basketball (single-game) ──
+    if (match.event_id === "basketball3v3") {
+        if (match.id === "B-SF1") {
+            return ["B-QF1", "B-QF2"].every((x) => statusOf(x) === "final");
+        }
+        if (match.id === "B-SF2") {
+            return ["B-QF3", "B-QF4"].every((x) => statusOf(x) === "final");
+        }
+        if (/^B-(F1|B1)$/.test(match.id)) {
+            return ["B-SF1", "B-SF2"].every((x) => statusOf(x) === "final");
+        }
+    }
+
+    // ── Badminton BO3: only show F2/F3 or B2/B3 after game 1 has started ──
+    if (/^[SD]-(F|B)[23]$/.test(match.id)) {
+        const opener = match.id.replace(/[23]$/, "1");
+        const st = statusOf(opener);
+        return st === "live" || st === "final";
+    }
+
+    return true;
+}
+
+function shouldShowMatch(match, allMatches) {
     const { competitor_a, competitor_b, match_type, status } = match;
 
     // Always show qualifiers
@@ -107,9 +145,10 @@ function shouldShowMatch(match) {
     // Don't show voided matches
     if (status === "void") return false;
 
-    // For series matches (semi/bronze/final), only show if:
-    // 1. Both competitors are real teams (not placeholders)
-    // 2. OR the match has already started/finished
+    // Progressive dependency gate (e.g., B-SF waits for QFs, finals wait for SFs)
+    if (!depsSatisfied(match, allMatches)) return false;
+
+    // Show if both teams are real, or the match already started/finished
     const bothConfirmed =
         !isPlaceholder(competitor_a?.id) && !isPlaceholder(competitor_b?.id);
     const hasStarted = status === "live" || status === "final";
@@ -118,16 +157,17 @@ function shouldShowMatch(match) {
 }
 
 function shouldShowGame3(matchId, allMatches) {
-    // Only check game 3 matches
-    if (!matchId.endsWith("-3") && !matchId.endsWith("3")) return true;
+    // Only applies to BADMINTON series (Basketball uses single elimination)
+    // Series game 3 patterns: S-F3, D-B3, S-SF1-3, D-SF2-3
+    const isSeriesGame3 =
+        matchId.match(/^[SD]-(F|B)3$/) || // Finals/Bronze game 3: S-F3, D-B3
+        matchId.match(/^[SD]-SF\d+-3$/); // Semi game 3: S-SF1-3, D-SF2-3
+
+    if (!isSeriesGame3) return true; // Not a badminton series game 3, always show
 
     // Find the series root
     let seriesRoot;
-    if (
-        matchId.includes("-SF") ||
-        matchId.includes("-F-") ||
-        matchId.includes("-B-")
-    ) {
+    if (matchId.includes("-SF")) {
         // Format: S-SF1-3 → S-SF1
         seriesRoot = matchId.replace(/-\d+$/, "");
     } else {
@@ -170,12 +210,13 @@ function extractMatchNumber(matchId) {
 }
 
 function getMatchPriority(matchId) {
-    // Order: Qualifiers → Semis → Bronze → Finals
-    if (matchId.includes("-Q")) return 1;
-    if (matchId.includes("-SF")) return 2;
-    if (matchId.includes("-B")) return 3;
-    if (matchId.includes("-F")) return 4;
-    return 5;
+    // Universal priority order for all events
+    if (matchId.includes("-Q")) return 1; // Qualifiers
+    if (matchId.includes("-QF")) return 2; // Quarterfinals (Basketball)
+    if (matchId.includes("-SF")) return 3; // Semifinals
+    if (matchId.includes("-B")) return 4; // Bronze
+    if (matchId.includes("-F")) return 5; // Finals
+    return 6;
 }
 
 function listen(eventId) {
@@ -193,14 +234,11 @@ function listen(eventId) {
 
         // Filter matches to show
         const visibleMatches = allMatches.filter((match) => {
-            // Basic visibility check
-            if (!shouldShowMatch(match)) return false;
+            if (!shouldShowMatch(match, allMatches)) return false;
 
-            // Special handling for game 3
             if (match.id.endsWith("-3") || match.id.endsWith("3")) {
                 return shouldShowGame3(match.id, allMatches);
             }
-
             return true;
         });
 
@@ -250,14 +288,14 @@ function listen(eventId) {
 
             rows.push(`
         <tr class="even:bg-gray-50 text-center">
-          ${td(`#${match.id}`)}
-          ${td(fmtDT(match.scheduled_at.toDate()))}
-          ${teamTd(red, aWin, aCls)}
-          ${scoreTd(match.score_a, aWin, aCls)}
-          ${teamTd(blue, bWin, bCls)}
-          ${scoreTd(match.score_b, bWin, bCls)}
-          ${td(match.venue || "–", "text-center")}
-          ${td(badge(match.status), "text-center")}
+            ${td(`#${match.id}`)}
+            ${td(fmtDT(match.scheduled_at.toDate()))}
+            ${teamTd(red, aWin, aCls)}
+            ${scoreTd(match.score_a, aWin, aCls)}
+            ${teamTd(blue, bWin, bCls)}
+            ${scoreTd(match.score_b, bWin, bCls)}
+            ${td(match.venue || "–", "text-center")}
+            ${td(badge(match.status), "text-center")}
         </tr>`);
         }
 
