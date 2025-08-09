@@ -143,13 +143,13 @@ function initAuth() {
                     a.textContent = "Admin Dashboard";
                     a.onclick = (e) => {
                         e.preventDefault();
-                        window.location = "admin.html";
+                        window.location = "dashboard.html";
                     };
                 } else if (role === "scorekeeper") {
                     a.textContent = "Scorekeeper Dashboard";
                     a.onclick = (e) => {
                         e.preventDefault();
-                        window.location = "sk-dashboard.html";
+                        window.location = "dashboard.html";
                     };
                 } else {
                     // default user

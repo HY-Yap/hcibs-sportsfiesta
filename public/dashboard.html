@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>User Dashboard</title>
+  <title>Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -11,7 +12,7 @@
         extend: {
           colors: {
             primary: { DEFAULT: "#2563eb", dark: "#1e40af" },
-            accent: { DEFAULT: "#facc15" } /* softer yellow */,
+            accent: { DEFAULT: "#facc15" },
           },
         },
       },
@@ -25,12 +26,8 @@
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
-
-  <!-- Fixed Navbar Placeholder -->
   <div id="nav-placeholder"></div>
-
   <div class="flex min-h-screen">
-    <!-- Sidebar -->
     <aside
       id="sidebar"
       class="w-64 bg-primary text-white flex flex-col p-6 space-y-6
@@ -39,39 +36,24 @@
             md:static md:transform-none
             transition-transform duration-200 ease-in-out"
     >
-      <h1 class="text-2xl font-bold mb-6">User Dashboard</h1>
-      <nav class="flex flex-col space-y-3">
-        <a href="#" class="block py-2 px-3 rounded hover:bg-accent hover:text-primary font-semibold transition">My Profile</a>
-        <a href="#" class="block py-2 px-3 rounded hover:bg-accent hover:text-primary font-semibold transition">My Matches</a>
-        <a href="#" class="block py-2 px-3 rounded hover:bg-accent hover:text-primary font-semibold transition">My Stats</a>
+      <h1 id="sidebar-title" class="text-2xl font-bold mb-6">Dashboard</h1>
+      <nav id="sidebar-nav" class="flex flex-col space-y-3">
+        <!-- Links will be rendered by JS -->
       </nav>
     </aside>
-
-    <!-- Overlay -->
-    <div
-      id="sidebar-overlay"
-      class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"
-    ></div>
-
-    <!-- Main Content -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
     <main class="flex-1 p-6">
       <header class="flex items-center justify-between mb-4 md:hidden">
-        <button
-          id="sidebar-toggle"
-          aria-label="Open sidebar"
-          class="text-primary text-3xl focus:outline-none"
-        >
+        <button id="sidebar-toggle" aria-label="Open sidebar" class="text-primary text-3xl focus:outline-none">
           &#9776;
         </button>
-        <h2 class="text-xl font-semibold">User Dashboard</h2>
+        <h2 id="dashboard-title" class="text-xl font-semibold">Dashboard</h2>
       </header>
-
-      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Welcome to your dashboard</h2>
-      <p class="text-gray-700">Here you can view and manage your profile, matches, and stats.</p>
+      <section id="main-content">
+        <!-- Main content will be rendered by JS based on role -->
+      </section>
     </main>
-
   </div>
-
   <script src="js/include-nav.js"></script>
   <script src="js/firebase-init.js" type="module"></script>
   <script src="js/auth.js" type="module"></script>
