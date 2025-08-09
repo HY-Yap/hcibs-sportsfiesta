@@ -92,20 +92,31 @@ function shell(rowsHtml) {
 }
 
 /* ----------  progressive reveal helpers ---------- */
-function isPlaceholder(teamId) {
+function isPlaceholder(teamId, match) {
     if (!teamId) return true;
 
-    // Badminton finals/bronze placeholders: SFW1, SBW2, DFW1, DBW2
+    // Badminton finals/bronze placeholders
     if (/^(?:S|D)[FB]W\d+$/.test(teamId)) return true;
 
-    // Basketball QF seeding placeholders: BW1..BW8
+    // Basketball placeholders (seed & progression tags)
     if (/^BW[1-8]$/.test(teamId)) return true;
-
-    // Basketball progression placeholders: BQF1W, BQF2W, BQF3W, BQF4W, BSF1W, BSF2W, BSF1L, BSF2L
     if (/^B(?:QF[1-4]W|SF[12][WL])$/.test(teamId)) return true;
 
-    // (Optional) also hide badminton semi placeholders S1..S4 / D1..D4
+    // (Optional) badminton semi placeholders (S1..S4 / D1..D4)
     if (/^(?:S|D)[1-4]$/.test(teamId)) return true;
+
+    // Frisbee placeholders used in elims
+    if (/^F(?:R[12]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true;
+
+    // 🔴 IMPORTANT: Only treat A1..C4 as placeholders for frisbee elims,
+    // not for basketball.
+    if (
+        match?.event_id === "frisbee5v5" &&
+        match?.match_type !== "qualifier" &&
+        /^[ABC][1-4]$/.test(teamId)
+    ) {
+        return true;
+    }
 
     return false;
 }
@@ -113,24 +124,67 @@ function isPlaceholder(teamId) {
 function depsSatisfied(match, all) {
     const statusOf = (id) => all.find((m) => m.id === id)?.status;
 
-    // ── Basketball (single-game) ──
+    // ── Basketball ──
     if (match.event_id === "basketball3v3") {
-        if (match.id === "B-SF1") {
+        // QF matches need all qualifiers to be final
+        if (/^B-QF[1-4]$/.test(match.id)) {
+            return all
+                .filter(
+                    (m) =>
+                        m.event_id === "basketball3v3" &&
+                        m.match_type === "qualifier"
+                )
+                .every((m) => m.status === "final");
+        }
+
+        if (match.id === "B-SF1")
             return ["B-QF1", "B-QF2"].every((x) => statusOf(x) === "final");
-        }
-        if (match.id === "B-SF2") {
+        if (match.id === "B-SF2")
             return ["B-QF3", "B-QF4"].every((x) => statusOf(x) === "final");
-        }
-        if (/^B-(F1|B1)$/.test(match.id)) {
+        if (/^B-(F1|B1)$/.test(match.id))
             return ["B-SF1", "B-SF2"].every((x) => statusOf(x) === "final");
-        }
     }
 
-    // ── Badminton BO3: only show F2/F3 or B2/B3 after game 1 has started ──
+    // ── Badminton BO3 ──
     if (/^[SD]-(F|B)[23]$/.test(match.id)) {
         const opener = match.id.replace(/[23]$/, "1");
         const st = statusOf(opener);
         return st === "live" || st === "final";
+    }
+
+    // ── Frisbee ── (Fixed dependency logic)
+    if (match.event_id === "frisbee5v5") {
+        const qualsDone = all
+            .filter(
+                (m) =>
+                    m.event_id === "frisbee5v5" && m.match_type === "qualifier"
+            )
+            .every((m) => m.status === "final");
+
+        // Redemption (only after all qualifiers done)
+        if (/^F-R[12]$/.test(match.id)) return qualsDone;
+
+        // QF1/QF2: show only after BOTH redemption matches are FINAL
+        if (/^F-QF[12]$/.test(match.id)) {
+            return statusOf("F-R1") === "final" && statusOf("F-R2") === "final";
+        }
+
+        // 🔥 QF3/QF4: only check if redemption is done, NOT team confirmation here
+        if (match.id === "F-QF3") return statusOf("F-R1") === "final";
+        if (match.id === "F-QF4") return statusOf("F-R2") === "final";
+
+        // SFs wait for their QFs
+        if (match.id === "F-SF1")
+            return ["F-QF1", "F-QF3"].every((x) => statusOf(x) === "final");
+        if (match.id === "F-SF2")
+            return ["F-QF2", "F-QF4"].every((x) => statusOf(x) === "final");
+
+        // Bronze/Final wait for both SFs
+        if (/^F-(?:F1|B1)$/.test(match.id))
+            return ["F-SF1", "F-SF2"].every((x) => statusOf(x) === "final");
+
+        // Bonus waits for Final
+        if (match.id === "F-BON1") return statusOf("F-F1") === "final";
     }
 
     return true;
@@ -139,19 +193,34 @@ function depsSatisfied(match, all) {
 function shouldShowMatch(match, allMatches) {
     const { competitor_a, competitor_b, match_type, status } = match;
 
-    // Always show qualifiers
     if (match_type === "qualifier") return true;
-
-    // Don't show voided matches
     if (status === "void") return false;
-
-    // Progressive dependency gate (e.g., B-SF waits for QFs, finals wait for SFs)
     if (!depsSatisfied(match, allMatches)) return false;
 
-    // Show if both teams are real, or the match already started/finished
     const bothConfirmed =
-        !isPlaceholder(competitor_a?.id) && !isPlaceholder(competitor_b?.id);
+        !isPlaceholder(competitor_a?.id, match) &&
+        !isPlaceholder(competitor_b?.id, match);
     const hasStarted = status === "live" || status === "final";
+
+    // Allow Basketball elims (QF/SF/B/F) to show once deps are met,
+    // even if names are still BW1..BW8, BQF1W etc.
+    if (match.event_id === "basketball3v3" && match_type !== "qualifier") {
+        return true; // depsSatisfied already enforced above
+    }
+
+    // Allow Frisbee elims (R/QF/SF/F/BON) to show once deps are met,
+    // even if names are still A1/B2 etc.
+    if (match.event_id === "frisbee5v5" && match_type !== "qualifier") {
+        return hasStarted || bothConfirmed || true; // depsSatisfied already true
+    }
+
+    // For Frisbee QF3/QF4: require BOTH dependency AND confirmed teams
+    if (match.event_id === "frisbee5v5" && /^F-QF[34]$/.test(match.id)) {
+        const bothConfirmed =
+            !isPlaceholder(competitor_a?.id, match) &&
+            !isPlaceholder(competitor_b?.id, match);
+        return bothConfirmed;
+    }
 
     return bothConfirmed || hasStarted;
 }
@@ -210,13 +279,19 @@ function extractMatchNumber(matchId) {
 }
 
 function getMatchPriority(matchId) {
-    // Universal priority order for all events
-    if (matchId.includes("-Q")) return 1; // Qualifiers
-    if (matchId.includes("-QF")) return 2; // Quarterfinals (Basketball)
-    if (matchId.includes("-SF")) return 3; // Semifinals
-    if (matchId.includes("-B")) return 4; // Bronze
-    if (matchId.includes("-F")) return 5; // Finals
-    return 6;
+    // Get the actual match type code from the ID (Q, QF, SF, etc.)
+    const matchPart = matchId.split("-")[1] || "";
+
+    // Check match types in correct order
+    if (matchId.includes("-QF")) return 3;
+    if (matchId.includes("-Q")) return 1;
+    if (matchId.includes("-R")) return 2;
+    if (matchId.includes("-SF")) return 4;
+    if (matchId.includes("-BON")) return 7;
+    if (matchId.includes("-B")) return 5;
+    if (matchId.includes("-F")) return 6;
+
+    return 8; // Anything else
 }
 
 function listen(eventId) {
@@ -244,20 +319,18 @@ function listen(eventId) {
 
         // Sort the visible matches
         const sortedMatches = visibleMatches.sort((a, b) => {
-            // First by match type priority
+            // First by match type priority (Q, R, QF, SF, B, F, BON)
             const aPriority = getMatchPriority(a.id);
             const bPriority = getMatchPriority(b.id);
             if (aPriority !== bPriority) return aPriority - bPriority;
 
-            // Then by scheduled time
-            const aTime = a.scheduled_at.toMillis();
-            const bTime = b.scheduled_at.toMillis();
-            if (aTime !== bTime) return aTime - bTime;
-
-            // Finally by match number
-            const aMatch = extractMatchNumber(a.id);
-            const bMatch = extractMatchNumber(b.id);
-            return aMatch - bMatch;
+            // Scheduled time first, then match number
+            const timeCompare =
+                a.scheduled_at.toMillis() - b.scheduled_at.toMillis();
+            return (
+                timeCompare ||
+                extractMatchNumber(a.id) - extractMatchNumber(b.id)
+            );
         });
 
         const rows = [];
