@@ -271,7 +271,7 @@ function getMatchStatus(match) {
 /* ───── auth gate ───── */
 onAuthStateChanged(auth, async (user) => {
     if (!user) return err("Please log in.");
-    if ((await user.getIdTokenResult()).claims.role !== "scorekeeper")
+    if ((await user.getIdTokenResult()).claims.role !== "scorekeeper" && (await user.getIdTokenResult()).claims.role !== "admin")
         return err("Not a score-keeper account.");
     await populateEventDropdown();
     resumeIfAny();

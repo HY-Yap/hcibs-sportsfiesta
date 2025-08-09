@@ -22,20 +22,20 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-  const sidebar = document.getElementById("sidebar");
-  const toggleBtn = document.getElementById("sidebar-toggle");
-  const overlay = document.getElementById("sidebar-overlay");
+const sidebar = document.getElementById("sidebar");
+const toggleBtn = document.getElementById("sidebar-toggle");
+const overlay = document.getElementById("sidebar-overlay");
 
-  if (toggleBtn && sidebar && overlay) {
-    toggleBtn.addEventListener("click", () => {
-      sidebar.classList.toggle("-translate-x-full");
-      overlay.classList.toggle("hidden");
-    });
+if (toggleBtn && sidebar && overlay) {
+  toggleBtn.addEventListener("click", () => {
+    sidebar.classList.toggle("-translate-x-full");
+    overlay.classList.toggle("hidden");
+    toggleBtn.classList.add("hidden"); // Hide hamburger when sidebar is open
+  });
 
-    overlay.addEventListener("click", () => {
-      sidebar.classList.add("-translate-x-full");
-      overlay.classList.add("hidden");
-    });
-  }
-});
+  overlay.addEventListener("click", () => {
+    sidebar.classList.add("-translate-x-full");
+    overlay.classList.add("hidden");
+    toggleBtn.classList.remove("hidden"); // Show hamburger when sidebar is closed
+  });
+}
