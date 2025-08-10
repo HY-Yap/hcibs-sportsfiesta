@@ -38,6 +38,7 @@ service cloud.firestore {
     match /teams/{teamId} {
       allow read:  if true;
       allow write: if isAdmin();
+      allow list: if isAdmin();                 // needed for aggregate queries
     }
 
     match /registrations/{regId} {
@@ -57,6 +58,8 @@ service cloud.firestore {
       allow read:  if request.auth != null &&
                     request.auth.uid == userId;
       allow write: if isAdmin();   // only admins edit user docs
+      allow list: if isAdmin();                 // needed for aggregate queries
+      allow get:  if isAdmin() || (request.auth != null && request.auth.uid == uid);
     }
 
     /* ───────── HELPER FUNCTIONS ───────── */

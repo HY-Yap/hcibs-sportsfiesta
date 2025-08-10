@@ -14,8 +14,37 @@ import {
 const db = window.firebase.db;
 const container = document.getElementById("match-container");
 
-/* ----------  team-name cache ---------- */
+/* ----------  team-name cache with event-scoped resolution ---------- */
 const cache = new Map();
+
+// Helper function for event-scoped team name resolution
+async function resolveTeamName(eventId, competitorId) {
+    if (!competitorId) return competitorId;
+
+    const cacheKey = `${eventId}__${competitorId}`;
+    if (cache.has(cacheKey)) return cache.get(cacheKey);
+
+    try {
+        // Try namespaced first (new format)
+        const namespacedId = `${eventId}__${competitorId}`;
+        let snap = await getDoc(doc(db, "teams", namespacedId));
+
+        // Fall back to legacy format
+        if (!snap.exists()) {
+            snap = await getDoc(doc(db, "teams", competitorId));
+        }
+
+        const name = snap.exists() ? snap.data().name : competitorId;
+        cache.set(cacheKey, name);
+        return name;
+    } catch (error) {
+        console.warn(`Failed to resolve team name for ${competitorId}:`, error);
+        cache.set(cacheKey, competitorId);
+        return competitorId;
+    }
+}
+
+// Legacy function for backward compatibility
 async function teamName(id) {
     if (cache.has(id)) return cache.get(id);
     try {
@@ -336,9 +365,10 @@ function listen(eventId) {
         const rows = [];
 
         for (const match of sortedMatches) {
+            // 🔥 Use event-scoped team name resolution
             const [red, blue] = await Promise.all([
-                teamName(match.competitor_a.id),
-                teamName(match.competitor_b.id),
+                resolveTeamName(match.event_id, match.competitor_a.id),
+                resolveTeamName(match.event_id, match.competitor_b.id),
             ]);
 
             const isFinal = match.status === "final";

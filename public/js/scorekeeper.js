@@ -20,8 +20,11 @@ import {
     serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const { db, auth } = window.firebase;
+
+const teamCache = new Map();
 
 /* ───── quick DOM ───── */
 const $ = (id) => document.getElementById(id);
@@ -60,6 +63,33 @@ const err = (t) => {
     msg.textContent = t;
     msg.classList.remove("hidden");
 };
+
+// Helper function for event-scoped team name resolution
+async function resolveTeamName(eventId, competitorId) {
+    if (!competitorId) return competitorId;
+
+    const cacheKey = `${eventId}__${competitorId}`;
+    if (teamCache.has(cacheKey)) return teamCache.get(cacheKey);
+
+    try {
+        // Try namespaced first (new format)
+        const namespacedId = `${eventId}__${competitorId}`;
+        let snap = await getDoc(doc(db, "teams", namespacedId));
+
+        // Fall back to legacy format
+        if (!snap.exists()) {
+            snap = await getDoc(doc(db, "teams", competitorId));
+        }
+
+        const name = snap.exists() ? snap.data().name : competitorId;
+        teamCache.set(cacheKey, name);
+        return name;
+    } catch (error) {
+        console.warn(`Failed to resolve team name for ${competitorId}:`, error);
+        teamCache.set(cacheKey, competitorId);
+        return competitorId;
+    }
+}
 
 /* ───── progressive reveal helpers ───── */
 
@@ -271,7 +301,10 @@ function getMatchStatus(match) {
 /* ───── auth gate ───── */
 onAuthStateChanged(auth, async (user) => {
     if (!user) return err("Please log in.");
-    if ((await user.getIdTokenResult()).claims.role !== "scorekeeper" && (await user.getIdTokenResult()).claims.role !== "admin")
+    if (
+        (await user.getIdTokenResult()).claims.role !== "scorekeeper" &&
+        (await user.getIdTokenResult()).claims.role !== "admin"
+    )
         return err("Not a score-keeper account.");
     await populateEventDropdown();
     resumeIfAny();
@@ -312,7 +345,7 @@ async function refreshMatchDropdown(eventId) {
         orderBy("scheduled_at")
     );
 
-    unsubMatchList = onSnapshot(q, (snap) => {
+    unsubMatchList = onSnapshot(q, async (snap) => {
         const allMatches = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
         // Filter matches to show
@@ -368,34 +401,59 @@ async function refreshMatchDropdown(eventId) {
             return;
         }
 
-        sortedMatches.forEach((match) => {
+        // Wait for all team name resolutions before populating dropdown
+        const optionsPromises = sortedMatches.map(async (match) => {
             const statusIcon = getMatchStatus(match);
-            const teamA = match.competitor_a?.id || "TBD";
-            const teamB = match.competitor_b?.id || "TBD";
 
-            sel.insertAdjacentHTML(
-                "beforeend",
-                `<option value="${match.id}">
-                    ${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${
+            // 🔥 Resolve team names using event-scoped lookup
+            const teamA =
+                (await resolveTeamName(
+                    match.event_id,
+                    match.competitor_a?.id
+                )) || "TBD";
+            const teamB =
+                (await resolveTeamName(
+                    match.event_id,
+                    match.competitor_b?.id
+                )) || "TBD";
+
+            return {
+                matchId: match.id,
+                html: `<option value="${match.id}">
+            ${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${
                     match.venue
                 } (${teamA} vs ${teamB})
-                </option>`
-            );
+        </option>`,
+            };
         });
 
-        // Restore selection if still available
-        if (
-            currentSelection &&
-            Array.from(sel.options).some(
-                (opt) => opt.value === currentSelection
-            )
-        ) {
-            sel.value = currentSelection;
-        } else {
-            sel.selectedIndex = 0;
-        }
+        // Wait for all options to be ready
+        try {
+            const options = await Promise.all(optionsPromises);
 
-        load.disabled = !sel.value;
+            // Add all options in the correct order
+            options.forEach((option) => {
+                sel.insertAdjacentHTML("beforeend", option.html);
+            });
+
+            // Restore selection if still available
+            if (
+                currentSelection &&
+                Array.from(sel.options).some(
+                    (opt) => opt.value === currentSelection
+                )
+            ) {
+                sel.value = currentSelection;
+            } else {
+                sel.selectedIndex = 0;
+            }
+
+            load.disabled = !sel.value;
+        } catch (error) {
+            console.error("Error populating dropdown:", error);
+            sel.innerHTML = '<option value="">Error loading matches</option>';
+            load.disabled = true;
+        }
     });
 }
 
@@ -556,7 +614,12 @@ start.addEventListener("click", async () => {
 });
 end.addEventListener("click", async () => {
     if (end.disabled) return;
-    if (!confirm("Are you sure you want to end the match? This action cannot be undone.")) return;
+    if (
+        !confirm(
+            "Are you sure you want to end the match? This action cannot be undone."
+        )
+    )
+        return;
     clearInterval(interval);
     await updateDoc(docRef, { status: "final", ...logicalScores() });
     finishUI();
