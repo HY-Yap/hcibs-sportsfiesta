@@ -556,6 +556,7 @@ start.addEventListener("click", async () => {
 });
 end.addEventListener("click", async () => {
     if (end.disabled) return;
+    if (!confirm("Are you sure you want to end the match? This action cannot be undone.")) return;
     clearInterval(interval);
     await updateDoc(docRef, { status: "final", ...logicalScores() });
     finishUI();
