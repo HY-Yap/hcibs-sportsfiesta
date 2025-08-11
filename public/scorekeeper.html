@@ -10,8 +10,9 @@
                 theme: {
                     extend: {
                         colors: {
-                            primary: { DEFAULT: "#2563eb", dark: "#1e40af" },
-                            accent: { DEFAULT: "#facc15" },
+                            primary: { light: "#3b82f6", DEFAULT: "#2563eb", dark: "#1e40af" },
+                            accent: { light: "#fde047", DEFAULT: "#facc15", dark: "#ca8a04" },
+                            danger: { light: "#ef4444", DEFAULT: "#dc2626", dark: "#b91c1c" }
                         },
                     },
                 },
@@ -24,11 +25,11 @@
         <div class="flex min-h-screen">
             <aside
                 id="sidebar"
-                class="w-64 bg-primary text-white flex flex-col p-6 space-y-6
+                class="w-64 bg-gradient-to-b from-primary to-primary-dark text-white flex flex-col p-6 space-y-6
                     fixed top-0 bottom-0 left-0 z-40
                     -translate-x-full md:translate-x-0
                     md:static md:transform-none
-                    transition-transform duration-200 ease-in-out"
+                    transition-transform duration-200 ease-in-out shadow-lg"
                 style="will-change: transform;"
             >
                 <h1 id="sidebar-title" class="text-2xl font-bold mb-6">Dashboard</h1>

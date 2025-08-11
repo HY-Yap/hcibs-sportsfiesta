@@ -12,7 +12,21 @@
                 theme: {
                     extend: {
                         colors: {
-                            primary: { DEFAULT: "#2563eb", dark: "#1e40af" },
+                            primary: { 
+                                light: "#3b82f6", 
+                                DEFAULT: "#2563eb", 
+                                dark: "#1e40af" 
+                            },
+                            accent: { 
+                                light: "#fde047", 
+                                DEFAULT: "#facc15", 
+                                dark: "#ca8a04" 
+                            },
+                            danger: { 
+                                light: "#ef4444", 
+                                DEFAULT: "#dc2626", 
+                                dark: "#b91c1c" 
+                            }
                         },
                     },
                 },
@@ -38,15 +52,15 @@
 
                     <!-- table wrapper (hidden until data rows exist) -->
                     <div
-                        class="tableWrap overflow-x-auto bg-white rounded shadow hidden"
+                        class="tableWrap overflow-x-auto bg-white rounded-lg shadow-md border border-gray-200 hidden transition-all duration-200 hover:shadow-lg"
                     >
                         <table class="min-w-full text-sm">
-                            <thead class="bg-primary text-white">
+                            <thead class="bg-gradient-to-r from-primary to-primary-dark text-white">
                                 <tr>
-                                    <th class="w-1/3 px-3 py-2 text-left">
+                                    <th class="w-1/3 px-4 py-3 text-left font-semibold">
                                         Award
                                     </th>
-                                    <th class="px-3 py-2 text-left">
+                                    <th class="px-4 py-3 text-left font-semibold">
                                         Winner / Team
                                     </th>
                                 </tr>

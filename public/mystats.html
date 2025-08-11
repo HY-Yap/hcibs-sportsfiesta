@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>My Stats · Sports Fiesta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: { light: "#3b82f6", DEFAULT: "#2563eb", dark: "#1e40af" },
+              accent: { light: "#fde047", DEFAULT: "#facc15", dark: "#ca8a04" },
+              danger: { light: "#ef4444", DEFAULT: "#dc2626", dark: "#b91c1c" }
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-gray-100 min-h-screen">
+    <div id="nav-placeholder"></div>
+    <div class="flex min-h-screen">
+      <aside
+        id="sidebar"
+        class="w-64 bg-gradient-to-b from-primary to-primary-dark text-white flex flex-col p-6 space-y-6
+          fixed top-0 bottom-0 left-0 z-40
+          -translate-x-full md:translate-x-0
+          md:static md:transform-none
+          transition-transform duration-200 ease-in-out shadow-lg"
+        style="will-change: transform;"
+      >
+        <h1 id="sidebar-title" class="text-2xl font-bold mb-6">Dashboard</h1>
+        <nav id="sidebar-nav" class="flex flex-col space-y-3">
+          <!-- Links will be rendered by JS -->
+        </nav>
+      </aside>
+      <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
+      <main class="flex-1 p-4 flex flex-col items-center relative">
+        <header class="flex items-center justify-between mb-4 md:hidden w-full px-4">
+          <button id="sidebar-toggle" aria-label="Open sidebar" class="text-primary text-3xl focus:outline-none">
+            &#9776;
+          </button>
+          <h2 id="dashboard-title" class="text-xl font-semibold">My Stats</h2>
+        </header>
+        <h1 class="text-3xl font-semibold mb-6 text-center">My Stats</h1>
+        <section id="stats-section" class="w-full max-w-3xl">
+          <div id="stats-msg" class="text-red-600 mb-4 hidden text-center"></div>
+          <div id="stats-tables" class="space-y-8"></div>
+        </section>
+      </main>
+    </div>
+    <script src="js/include-nav.js"></script>
+    <script src="js/firebase-init.js" type="module"></script>
+    <script src="js/auth.js" type="module"></script>
+    <script type="module" src="js/dashboard.js"></script>
+    <script type="module" src="js/mystats.js"></script>
+    <script>
+    // Sidebar hamburger logic for mobile
+    document.addEventListener('DOMContentLoaded', function() {
+      var sidebar = document.getElementById('sidebar');
+      var toggleBtn = document.getElementById('sidebar-toggle');
+      var overlay = document.getElementById('sidebar-overlay');
+      if (toggleBtn && sidebar && overlay) {
+        toggleBtn.addEventListener('click', function() {
+          sidebar.classList.remove('-translate-x-full');
+          overlay.classList.remove('hidden');
+          toggleBtn.classList.add('hidden');
+        });
+        overlay.addEventListener('click', function() {
+          sidebar.classList.add('-translate-x-full');
+          overlay.classList.add('hidden');
+          toggleBtn.classList.remove('hidden');
+        });
+      }
+    });
+    </script>
+  </body>
+</html>

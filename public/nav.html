@@ -1,13 +1,13 @@
-<nav class="bg-blue-800 text-white">
+<nav class="bg-primary-dark text-white shadow-lg">
     <!-- Top bar -->
     <div
         class="w-full flex items-center justify-between px-4 sm:px-6 lg:px-10 h-16"
     >
-        <a href="index.html" class="text-xl font-bold">SPORTS FIESTA</a>
+        <a href="index.html" class="text-2xl font-bold tracking-wide hover:text-accent transition-colors">SPORTS FIESTA</a>
 
         <button
             id="menu-toggle"
-            class="md:hidden p-1"
+            class="md:hidden p-2 hover:bg-primary/50 rounded transition-colors"
             aria-label="Open menu"
             aria-controls="menu"
             aria-expanded="false"
@@ -28,24 +28,24 @@
             </svg>
         </button>
 
-        <ul class="hidden md:flex items-center gap-6 ml-auto">
-            <li><a href="index.html" class="hover:text-lime-300">Home</a></li>
+        <ul class="hidden md:flex items-center gap-4 ml-auto">
+            <li><a href="index.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent">Home</a></li>
             <li>
-                <a href="schedule.html" class="hover:text-lime-300">Schedule</a>
+                <a href="schedule.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent">Schedule</a>
             </li>
             <li>
-                <a href="matches-and-results.html" class="hover:text-lime-300"
+                <a href="matches-and-results.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
                     >Matches & Results</a
                 >
             </li>
             <li>
-                <a href="awards.html" class="hover:text-lime-300">Awards</a>
+                <a href="awards.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent">Awards</a>
             </li>
             <li>
-                <a href="#" class="auth-menu-btn hover:text-lime-300">Login</a>
+                <a href="#" class="auth-menu-btn hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent">Login</a>
             </li>
             <li>
-                <a href="#" class="logout-btn hover:text-lime-300 hidden"
+                <a href="#" class="logout-btn hover:bg-red-500/20 transition-colors py-2 px-2 rounded-lg hover:text-red-500 hidden"
                     >Logout</a
                 >
             </li>
@@ -57,19 +57,19 @@
         id="menu"
         class="hidden flex flex-col gap-3 px-4 sm:px-6 lg:px-10 pb-3 md:hidden"
     >
-        <li><a href="index.html" class="hover:text-lime-300">Home</a></li>
+        <li><a href="index.html" class="hover:bg-accent/20 transition-colors py-2 px-4 rounded-lg hover:text-accent block">Home</a></li>
         <li>
-            <a href="schedule.html" class="hover:text-lime-300">Schedule</a>
+            <a href="schedule.html" class="hover:bg-accent/20 transition-colors py-2 px-4 rounded-lg hover:text-accent block">Schedule</a>
         </li>
         <li>
-            <a href="matches-and-results.html" class="hover:text-lime-300"
+            <a href="matches-and-results.html" class="hover:bg-accent/20 transition-colors py-2 px-4 rounded-lg hover:text-accent block"
                 >Matches & Results</a
             >
         </li>
-        <li><a href="awards.html" class="hover:text-lime-300">Awards</a></li>
-        <li><a href="#" class="auth-menu-btn hover:text-lime-300">Login</a></li>
+        <li><a href="awards.html" class="hover:bg-accent/20 transition-colors py-2 px-4 rounded-lg hover:text-accent block">Awards</a></li>
+        <li><a href="#" class="auth-menu-btn hover:bg-accent/20 transition-colors py-2 px-4 rounded-lg hover:text-accent block">Login</a></li>
         <li>
-            <a href="#" class="logout-btn hover:text-lime-300 hidden">Logout</a>
+            <a href="#" class="logout-btn bg-red-800/10 hover:bg-red-800/20 transition-colors py-2 px-4 rounded-lg text-red-800 hidden block">Logout</a>
         </li>
     </ul>
 </nav>
