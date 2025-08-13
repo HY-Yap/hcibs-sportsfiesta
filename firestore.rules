@@ -54,9 +54,8 @@ service cloud.firestore {
     /* ───────── USER DOCS ───────── */
 
     match /users/{userId} {
-      // each user may read their own doc
-      allow read:  if request.auth != null &&
-                    request.auth.uid == userId;
+      // each user may read (for awards page)
+      allow read:  if true;
       allow write: if isAdmin();   // only admins edit user docs
       allow list: if isAdmin();                 // needed for aggregate queries
       allow get:  if isAdmin() || (request.auth != null && request.auth.uid == uid);
