@@ -177,7 +177,7 @@ onAuthStateChanged(auth, async (user) => {
         msgEl.classList.add("text-green-600");
         changePasswordForm.reset();
       } catch (err) {
-        if (err.code === "auth/wrong-password") {
+        if (err.code === "auth/invalid-credential") {
           msgEl.textContent = "Current password is wrong.";
         } else {
           msgEl.textContent = err.message || "Failed to change password.";
