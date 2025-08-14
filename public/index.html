@@ -10,43 +10,177 @@
                 theme: {
                     extend: {
                         colors: {
-                            primary: { 
-                                light: "#3b82f6", 
-                                DEFAULT: "#2563eb", 
-                                dark: "#1e40af" 
+                            primary: {
+                                light: "#3b82f6",
+                                DEFAULT: "#2563eb",
+                                dark: "#1e40af",
                             },
-                            accent: { 
-                                light: "#fde047", 
-                                DEFAULT: "#facc15", 
-                                dark: "#ca8a04" 
+                            accent: {
+                                light: "#fde047",
+                                DEFAULT: "#facc15",
+                                dark: "#ca8a04",
                             },
-                            danger: { 
-                                light: "#ef4444", 
-                                DEFAULT: "#dc2626", 
-                                dark: "#b91c1c" 
-                            }
+                            danger: {
+                                light: "#ef4444",
+                                DEFAULT: "#dc2626",
+                                dark: "#b91c1c",
+                            },
                         },
                     },
                 },
             };
         </script>
-        <link rel="icon" href="data:,">
+        <link rel="icon" href="data:," />
     </head>
     <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
         <!-- NAVIGATION GETS INJECTED HERE -->
         <div id="nav-placeholder"></div>
 
         <!-- PAGE CONTENT -->
+        <!-- Replace the current main content with this -->
         <main class="p-8">
-            <h1 class="text-3xl font-bold">Welcome to Sports Fiesta</h1>
-            <p class="mt-4">
-                This is your homepage—nav should already appear above.
-            </p>
+            <!-- Hero Section -->
+            <div
+                class="bg-gradient-to-r from-primary to-primary-dark text-white rounded-lg p-8 mb-8"
+            >
+                <div class="max-w-4xl mx-auto text-center">
+                    <!-- Replace the h1 with logo -->
+                    <div class="mb-6">
+                        <img
+                            src="logo.png"
+                            alt="Sports Fiesta 2025"
+                            class="h-16 md:h-20 lg:h-24 mx-auto object-contain drop-shadow-lg"
+                        />
+                    </div>
+                    <p class="text-xl mb-6">
+                        The ultimate HCIBS sports competition!
+                    </p>
+                    <!-- rest stays the same -->
+                </div>
+            </div>
+
+            <!-- Quick Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-6 text-center">
+                    <div class="text-3xl mb-2">🏸</div>
+                    <div
+                        class="text-2xl font-bold text-primary"
+                        id="badminton-teams"
+                    >
+                        --
+                    </div>
+                    <div class="text-gray-600">Badminton Teams</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6 text-center">
+                    <div class="text-3xl mb-2">🏀</div>
+                    <div
+                        class="text-2xl font-bold text-primary"
+                        id="basketball-teams"
+                    >
+                        --
+                    </div>
+                    <div class="text-gray-600">Basketball Teams</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6 text-center">
+                    <div class="text-3xl mb-2">🥏</div>
+                    <div
+                        class="text-2xl font-bold text-primary"
+                        id="frisbee-teams"
+                    >
+                        --
+                    </div>
+                    <div class="text-gray-600">Frisbee Teams</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6 text-center">
+                    <div class="text-3xl mb-2">🎯</div>
+                    <div
+                        class="text-2xl font-bold text-primary"
+                        id="total-matches"
+                    >
+                        --
+                    </div>
+                    <div class="text-gray-600">Total Matches</div>
+                </div>
+            </div>
+
+            <!-- Recent Results & Upcoming Matches -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Recent Results -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <span class="text-2xl mr-2">🎯</span> Latest Results
+                    </h2>
+                    <div id="recent-results" class="space-y-3">
+                        <div class="text-gray-500 text-center py-4">
+                            Loading recent matches...
+                        </div>
+                    </div>
+                    <div class="mt-4 text-center">
+                        <a
+                            href="matches-and-results.html"
+                            class="text-primary hover:text-primary-dark font-medium"
+                        >
+                            Matches and Results →
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Upcoming Matches -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <span class="text-2xl mr-2">📅</span> Upcoming Matches
+                    </h2>
+                    <div id="upcoming-matches" class="space-y-3">
+                        <div class="text-gray-500 text-center py-4">
+                            Loading upcoming matches...
+                        </div>
+                    </div>
+                    <div class="mt-4 text-center">
+                        <a
+                            href="matches-and-results.html"
+                            class="text-primary hover:text-primary-dark font-medium"
+                        >
+                            Matches and Results →
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions (for authenticated users) -->
+            <div
+                id="user-actions"
+                class="mt-8 bg-accent-light/10 rounded-lg p-6 hidden"
+            >
+                <h2 class="text-xl font-bold mb-4 text-center">
+                    Quick Actions
+                </h2>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a
+                        href="dashboard.html"
+                        class="bg-primary text-white px-4 py-2 rounded hover:bg-primary-dark transition"
+                    >
+                        View Dashboard
+                    </a>
+                    <a
+                        href="mymatches.html"
+                        class="bg-accent text-accent-dark px-4 py-2 rounded hover:bg-accent-dark hover:text-white transition"
+                    >
+                        My Matches
+                    </a>
+                    <a
+                        href="mystats.html"
+                        class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition"
+                    >
+                        My Stats
+                    </a>
+                </div>
+            </div>
         </main>
 
         <!-- include-nav must come after the placeholder -->
         <script src="js/include-nav.js"></script>
         <script src="js/firebase-init.js" type="module"></script>
         <script src="js/auth.js" type="module"></script>
+        <script src="js/homepage.js" type="module"></script>
     </body>
 </html>

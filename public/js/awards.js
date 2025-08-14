@@ -30,7 +30,7 @@ const teamCache = new Map();
 
 // Helper function for event-scoped team name resolution
 async function resolveTeamName(eventId, competitorId) {
-    if (!competitorId) return competitorId;
+    if (!competitorId) return { name: competitorId, roster: [] };
 
     const cacheKey = `${eventId}__${competitorId}`;
     if (teamCache.has(cacheKey)) return teamCache.get(cacheKey);
@@ -42,17 +42,32 @@ async function resolveTeamName(eventId, competitorId) {
 
         // Fall back to legacy format
         if (!snap.exists()) {
-            snap = await getDoc(doc(db, "teams", competitorId));
+            const legacyQuery = query(
+                collection(db, "teams"),
+                where("name", "==", competitorId)
+            );
+            const legacySnap = await getDocs(legacyQuery);
+            if (!legacySnap.empty) {
+                snap = legacySnap.docs[0];
+            }
         }
 
-        const data = snap.exists() ? snap.data() : {};
-        const info = {
-            name: data.name || competitorId,
-            roster: data.member_emails || data.roster || [],
-        };
-
-        teamCache.set(cacheKey, info);
-        return info;
+        if (snap.exists()) {
+            const data = snap.data();
+            const info = {
+                name: data.name || competitorId,
+                roster: data.member_emails || [],
+            };
+            teamCache.set(cacheKey, info);
+            return info;
+        } else {
+            console.warn(
+                `No team found for ${namespacedId} or ${competitorId}`
+            );
+            const fallback = { name: competitorId, roster: [] };
+            teamCache.set(cacheKey, fallback);
+            return fallback;
+        }
     } catch (error) {
         console.warn(`Failed to resolve team info for ${competitorId}:`, error);
         const fallback = { name: competitorId, roster: [] };
@@ -61,49 +76,17 @@ async function resolveTeamName(eventId, competitorId) {
     }
 }
 
-// Legacy function for backward compatibility (if needed)
-async function teamInfo(tid) {
-    if (teamCache.has(tid)) return teamCache.get(tid);
-    const snap = await getDoc(doc(db, "teams", tid));
-    const info = snap.exists()
-        ? {
-              name: snap.data().name || tid,
-              roster: snap.data().member_emails || snap.data().roster || [],
-          }
-        : { name: tid, roster: [] };
-    teamCache.set(tid, info);
-    return info;
-}
-
-// Enhanced roster formatting with actual player names
+// Enhanced roster formatting with actual player names (same approach as athletes.js)
 async function formatRoster(roster) {
     if (!roster || roster.length === 0) return "";
 
-    // Look up actual player names from users collection
-    const namePromises = roster.map(async (email) => {
-        try {
-            // Query users collection by email
-            const userQuery = query(
-                collection(db, "users"),
-                where("email", "==", email)
-            );
-            const snapshot = await getDocs(userQuery);
-
-            if (!snapshot.empty) {
-                const userData = snapshot.docs[0].data();
-                return userData.full_name || userData.name || email;
-            }
-        } catch (error) {
-            console.warn(`Failed to resolve name for ${email}:`, error);
-        }
-
-        // Fallback to email if lookup fails
-        return email;
+    // Extract names from emails (same logic as athletes.js)
+    const names = roster.map((email) => {
+        const username = email.split("@")[0];
+        return username.charAt(0).toUpperCase() + username.slice(1);
     });
 
-    const resolvedNames = await Promise.all(namePromises);
-
-    return `<i class="fas fa-users text-gray-400 mr-1"></i>${resolvedNames.join(
+    return `<i class="fas fa-users text-gray-400 mr-1"></i>${names.join(
         " • "
     )}`;
 }
@@ -150,7 +133,7 @@ async function renderEvent(eventId, awardData) {
         // 🔥 Use event-scoped team resolution
         const { name, roster } = await resolveTeamName(eventId, id);
 
-        // 🔥 Wait for roster names to resolve
+        // 🔥 Format roster using the same approach as athletes.js
         const rosterDisplay = roster.length
             ? `<br><span class="text-xs text-gray-600">${await formatRoster(
                   roster

@@ -4,7 +4,11 @@
         class="w-full flex items-center justify-between px-4 sm:px-6 lg:px-10 h-16"
     >
         <a href="index.html" class="flex items-center gap-3 group">
-            <img src="logo.png" alt="Sports Fiesta" class="h-12 w-auto object-contain select-none group-hover:opacity-90 transition-opacity" />
+            <img
+                src="logo.png"
+                alt="Sports Fiesta"
+                class="h-12 w-auto object-contain select-none group-hover:opacity-90 transition-opacity"
+            />
             <span class="sr-only">Sports Fiesta</span>
         </a>
 
@@ -32,23 +36,52 @@
         </button>
 
         <ul class="hidden md:flex items-center gap-4 ml-auto">
-            <li><a href="index.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent">Home</a></li>
             <li>
-                <a href="schedule.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent">Schedule</a>
+                <a
+                    href="index.html"
+                    class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Home</a
+                >
             </li>
             <li>
-                <a href="matches-and-results.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                <a
+                    href="schedule.html"
+                    class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Schedule</a
+                >
+            </li>
+            <li>
+                <a
+                    href="athletes.html"
+                    class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Athletes</a
+                >
+            </li>
+            <li>
+                <a
+                    href="matches-and-results.html"
+                    class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
                     >Matches & Results</a
                 >
             </li>
             <li>
-                <a href="awards.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent">Awards</a>
+                <a
+                    href="awards.html"
+                    class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Awards</a
+                >
             </li>
             <li>
-                <a href="#" class="auth-menu-btn hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent">Login</a>
+                <a
+                    href="#"
+                    class="auth-menu-btn hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Login</a
+                >
             </li>
             <li>
-                <a href="#" class="logout-btn hover:bg-red-500/20 transition-colors py-2 px-2 rounded-lg hover:text-red-500 hidden"
+                <a
+                    href="#"
+                    class="logout-btn hover:bg-red-500/20 transition-colors py-2 px-2 rounded-lg hover:text-red-500 hidden"
                     >Logout</a
                 >
             </li>
@@ -60,19 +93,47 @@
         id="menu"
         class="hidden flex flex-col gap-3 px-4 sm:px-6 lg:px-10 pb-3 md:hidden"
     >
-        <li><a href="index.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block">Home</a></li>
         <li>
-            <a href="schedule.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block">Schedule</a>
+            <a
+                href="index.html"
+                class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+                >Home</a
+            >
         </li>
         <li>
-            <a href="matches-and-results.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+            <a
+                href="schedule.html"
+                class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+                >Schedule</a
+            >
+        </li>
+        <li>
+            <a
+                href="matches-and-results.html"
+                class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
                 >Matches & Results</a
             >
         </li>
-        <li><a href="awards.html" class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block">Awards</a></li>
-        <li><a href="#" class="auth-menu-btn hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block">Login</a></li>
         <li>
-            <a href="#" class="logout-btn hover:bg-red-500/20 transition-colors py-2 px-2 rounded-lg hover:text-red-500 hidden block">Logout</a>
+            <a
+                href="awards.html"
+                class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+                >Awards</a
+            >
+        </li>
+        <li>
+            <a
+                href="#"
+                class="auth-menu-btn hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+                >Login</a
+            >
+        </li>
+        <li>
+            <a
+                href="#"
+                class="logout-btn hover:bg-red-500/20 transition-colors py-2 px-2 rounded-lg hover:text-red-500 hidden block"
+                >Logout</a
+            >
         </li>
     </ul>
 </nav>
@@ -105,7 +166,12 @@
         </button>
         <p id="modal-error" class="text-red-600 text-sm mb-3 hidden"></p>
         <div class="flex justify-end gap-2">
-            <button onclick="closeModal()" class="px-4 py-2 border rounded border-black hover:bg-gray-200">Cancel</button>
+            <button
+                onclick="closeModal()"
+                class="px-4 py-2 border rounded border-black hover:bg-gray-200"
+            >
+                Cancel
+            </button>
             <button
                 onclick="handleModalLogin()"
                 class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
