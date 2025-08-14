@@ -9,7 +9,7 @@ import {
 import {
     doc,
     getDoc,
-    setDoc
+    setDoc,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import { db } from "./firebase-init.js";
@@ -77,6 +77,10 @@ function initAuth() {
             );
             await setUserRole(userCred.user);
             closeModal();
+
+            // 🔥 Force page refresh to reload all personalized content
+            console.log("Login successful, refreshing page...");
+            window.location.reload();
         } catch (e) {
             if (e.code === "auth/too-many-requests") {
                 showMsg("Too many attempts. Try again later.");
@@ -97,7 +101,7 @@ function initAuth() {
             try {
                 await sendPasswordResetEmail(auth, email);
                 showMsg(
-                    "If an account exists for that email, we’ve sent a reset link. If you did not receive it, please check your spam.",
+                    "If an account exists for that email, we've sent a reset link. If you did not receive it, please check your spam.",
                     true
                 );
             } catch (e) {
@@ -105,7 +109,7 @@ function initAuth() {
                     showMsg("Enter a valid email address.");
                 } else {
                     showMsg(
-                        "If an account exists for that email, we’ve sent a reset link. If you did not receive it, please check your spam.",
+                        "If an account exists for that email, we've sent a reset link. If you did not receive it, please check your spam.",
                         true
                     );
                 }
@@ -122,12 +126,22 @@ function initAuth() {
             })
     );
 
-    // Logout handlers
+    // Logout handlers with page refresh
     logoutLinks.forEach(
         (a) =>
             (a.onclick = async (e) => {
                 e.preventDefault();
-                await signOut(auth);
+                try {
+                    await signOut(auth);
+
+                    // 🔥 Force page refresh to clear all personalized content
+                    console.log("Logout successful, refreshing page...");
+                    window.location.reload();
+                } catch (error) {
+                    console.error("Logout error:", error);
+                    // Still refresh even if there's an error
+                    window.location.reload();
+                }
             })
     );
 
@@ -137,6 +151,10 @@ function initAuth() {
             const userRef = doc(db, "users", user.uid);
             const docSnap = await getDoc(userRef);
             const role = docSnap.exists() ? docSnap.data().role : "user";
+
+            console.log(
+                `Auth state changed: User logged in with role: ${role}`
+            );
 
             authLinks.forEach((a) => {
                 if (role === "admin") {
@@ -163,6 +181,8 @@ function initAuth() {
 
             logoutLinks.forEach((a) => a.classList.remove("hidden"));
         } else {
+            console.log("Auth state changed: User logged out");
+
             authLinks.forEach((a) => {
                 a.textContent = "Login";
                 a.onclick = (e) => {

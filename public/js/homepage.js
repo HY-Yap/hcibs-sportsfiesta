@@ -6,8 +6,8 @@ import {
     where,
     orderBy,
     limit,
-    doc, // Add this
-    getDoc, // Add this
+    doc,
+    getDoc,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { auth, db } from "./firebase-init.js";
@@ -61,17 +61,13 @@ async function loadHomepageData() {
     try {
         console.log("Loading homepage data...");
 
-        // Load team counts
-        await loadTeamCounts();
-
-        // Load recent results
-        await loadRecentResults();
-
-        // Load upcoming matches
-        await loadUpcomingMatches();
-
-        // Load athlete count
-        await loadAthleteCount();
+        await Promise.all([
+            loadTeamCounts(),
+            loadRecentResults(),
+            loadUpcomingMatches(),
+            loadAthleteCount(),
+            setupQuickActions(), // Add this line
+        ]);
 
         console.log("Homepage data loaded successfully");
     } catch (error) {
@@ -432,6 +428,148 @@ async function resolveMatchTeamNames(match) {
         teamADisplayName: teamAName,
         teamBDisplayName: teamBName,
     };
+}
+
+// Enhanced setupQuickActions that waits for auth if needed
+async function setupQuickActions() {
+    const userActionsDiv = document.getElementById("user-actions");
+    if (!userActionsDiv) return;
+
+    try {
+        // Wait for auth to be ready if currentUser is null
+        let user = auth.currentUser;
+        if (!user) {
+            console.log("Waiting for auth state...");
+            // Wait up to 3 seconds for auth to initialize
+            await new Promise((resolve) => {
+                const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+                    unsubscribe();
+                    user = authUser;
+                    resolve();
+                });
+                // Timeout fallback
+                setTimeout(resolve, 3000);
+            });
+        }
+
+        if (!user) {
+            console.log("No authenticated user found");
+            userActionsDiv.classList.add("hidden");
+            return;
+        }
+
+        console.log("Setting up quick actions for user:", user.uid);
+
+        // Get user role from users collection
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const userData = userDoc.exists() ? userDoc.data() : {};
+
+        // Default to 'player' if no role is assigned or user document doesn't exist
+        const userRole = userData.role || "player";
+
+        console.log(`User role: ${userRole} (from userData:`, userData, `)`);
+
+        // Show the Quick Actions section
+        userActionsDiv.classList.remove("hidden");
+
+        // Generate role-specific actions
+        const actionsContainer = userActionsDiv.querySelector(".flex");
+        if (actionsContainer) {
+            actionsContainer.innerHTML = generateQuickActions(userRole);
+        }
+    } catch (error) {
+        console.warn("Failed to setup quick actions:", error);
+        // Show default player actions even if there's an error
+        const actionsContainer = userActionsDiv.querySelector(".flex");
+        if (actionsContainer) {
+            actionsContainer.innerHTML = generateQuickActions("player");
+        }
+        userActionsDiv.classList.remove("hidden");
+    }
+}
+
+// Generate Quick Actions HTML based on user role
+function generateQuickActions(userRole) {
+    const baseActions = {
+        // Default for players/participants (users without specific roles)
+        player: [
+            {
+                href: "dashboard.html",
+                text: "View Dashboard",
+                class: "bg-primary text-white",
+                icon: "🏸",
+            },
+            {
+                href: "mymatches.html",
+                text: "My Matches",
+                class: "bg-green-600 text-white",
+                icon: "📊",
+            },
+            {
+                href: "mystats.html",
+                text: "My Stats",
+                class: "bg-gray-600 text-white",
+                icon: "🏃‍♂️",
+            },
+        ],
+        scorekeeper: [
+            {
+                href: "dashboard.html",
+                text: "View Dashboard",
+                class: "bg-primary text-white",
+                icon: "📋",
+            },
+            {
+                href: "matches-and-results.html",
+                text: "Matches and Results",
+                class: "bg-green-600 text-white",
+                icon: "⚡",
+            },
+            {
+                href: "scorekeeper.html",
+                text: "Manage Scores",
+                class: "bg-gray-600 text-white",
+                icon: "🏃‍♂️",
+            },
+        ],
+        admin: [
+            {
+                href: "dashboard.html",
+                text: "View Dashboard",
+                class: "bg-primary text-white",
+                icon: "👑",
+            },
+            {
+                href: "scorekeeper.html",
+                text: "Manage Scores",
+                class: "bg-green-600 text-white",
+                icon: "⚡",
+            },
+            {
+                href: "controls.html",
+                text: "Admin Controls",
+                class: "bg-gray-600 text-white",
+                icon: "⚙️",
+            },
+        ],
+    };
+
+    // Default to 'player' actions if role is undefined, null, or not found
+    const actions = baseActions[userRole] || baseActions.player;
+
+    return actions
+        .map(
+            (action) => `
+        <a
+            href="${action.href}"
+            class="${action.class} px-4 py-2 rounded hover:opacity-90 transition flex items-center gap-2"
+        >
+            <span>${action.icon}</span>
+            ${action.text}
+        </a>
+    `
+        )
+        .join("");
 }
 
 // Show user actions for authenticated users
