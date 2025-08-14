@@ -9,7 +9,10 @@
 
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import key from "./serviceAccountKey.json" assert { type: "json" };
+// JSON import assertion fallback for older Node versions (<17.5) without support
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const key = require('./serviceAccountKey.json');
 
 initializeApp({ credential: cert(key), projectId: "hcibs-sportsfiesta" });
 const db = getFirestore();

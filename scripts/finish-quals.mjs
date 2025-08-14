@@ -14,7 +14,9 @@
 
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import key from "./serviceAccountKey.json" assert { type: "json" };
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const key = require('./serviceAccountKey.json');
 
 initializeApp({ credential: cert(key), projectId: "hcibs-sportsfiesta" });
 const db = getFirestore();

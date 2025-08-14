@@ -1,4 +1,4 @@
-/*  public/js/scorekeeper.js  (v 7)
+/*  public/js/scorekeeper.js  (v 8)
     ----------------------------------------------------------------
     + Smart match filtering: shows upcoming/live matches, hides finished
     + Progressive reveal: only shows matches when competitors are confirmed
@@ -36,6 +36,7 @@ const blueT = $("blueTeam");
 const sA = $("scoreA");
 const sB = $("scoreB");
 const timer = $("timer");
+const pauseBtn = $("pauseBtn");
 const start = $("startBtn");
 const end = $("endBtn");
 
@@ -47,6 +48,10 @@ let interval = null; // countdown ticker
 let flipped = false; // UI orientation
 let origRed = "",
     origBlue = "";
+let remainingSeconds = 0; // track remaining time
+let awaitingOvertime = false; // prevent double prompt
+let usedOvertime = false; // disallow >1 overtime
+let paused = false; // pause state
 
 /* helpers */
 const pad = (n) => String(n).padStart(2, "0");
@@ -60,6 +65,29 @@ const err = (t) => {
     msg.textContent = t;
     msg.classList.remove("hidden");
 };
+
+/* ───── per-event default durations (seconds) ─────
+   Requirements:
+   - basketball: all 8 mins
+   - badminton: 10 mins (qualifiers/elims/bronze), 15 mins each final game (F1/F2/F3)
+   - frisbee: 10 mins standard, 20 mins final (F-F1)
+*/
+function defaultDurationSeconds(match) {
+    const eventId = match.event_id || "";
+    const type = match.match_type;
+    // Basketball 3v3: flat 8 min always
+    if (eventId === "basketball3v3") return 8 * 60;
+    // Frisbee: finals 20, others 10
+    if (eventId === "frisbee5v5") {
+        return type === "final" ? 20 * 60 : 10 * 60;
+    }
+    // Badminton singles & doubles: finals 15, others 10
+    if (eventId.startsWith("badminton")) {
+        return type === "final" ? 15 * 60 : 10 * 60;
+    }
+    // Generic fallback
+    return 10 * 60;
+}
 
 /* ───── progressive reveal helpers ───── */
 
@@ -271,10 +299,39 @@ function getMatchStatus(match) {
 /* ───── auth gate ───── */
 onAuthStateChanged(auth, async (user) => {
     if (!user) return err("Please log in.");
-    if ((await user.getIdTokenResult()).claims.role !== "scorekeeper" && (await user.getIdTokenResult()).claims.role !== "admin")
-        return err("Not a score-keeper account.");
-    await populateEventDropdown();
-    resumeIfAny();
+    try {
+        // Force refresh to ensure newly set custom claims propagate
+        const token = await user.getIdTokenResult(true);
+        let role = token.claims.role;
+        // Fallback: read Firestore user doc if custom claim not present yet
+        if (!role) {
+            try {
+                const snap = await getDocs(query(collection(db, "users"), where("uid", "==", user.uid)));
+                // If users collection documents keyed by UID instead, try direct get
+                if (snap.empty) {
+                    const direct = await getDocs(collection(db, "users"));
+                    direct.forEach(d => { if (d.id === user.uid && !role) role = d.data().role; });
+                } else {
+                    snap.forEach(d => { if (!role) role = d.data().role; });
+                }
+            } catch (_) { /* ignore */ }
+        }
+        if (!role) {
+            // Try direct doc by id if schema is users/{uid}
+            try {
+                const directDoc = await getDocs(collection(db, "users"));
+                directDoc.forEach(d => { if (d.id === user.uid && !role) role = d.data().role; });
+            } catch (_) { /* ignore */ }
+        }
+        if (role !== "scorekeeper" && role !== "admin") {
+            return err("Not a scorekeeper account.");
+        }
+        await populateEventDropdown();
+        resumeIfAny();
+    } catch (e) {
+        console.warn("Role check failed", e);
+        return err("Unable to verify scorekeeper role.");
+    }
 });
 
 /* ───── 1. populate Event dropdown ───── */
@@ -346,7 +403,6 @@ async function refreshMatchDropdown(eventId) {
                 }
                 return true;
             });
-            // ...existing code for sorting and populating dropdown...
             // Sort matches: Live first, then by priority, then by time, then by number
             const sortedMatches = visibleMatches.sort((a, b) => {
                 if (a.status === "live" && b.status !== "live") return -1;
@@ -376,9 +432,11 @@ async function refreshMatchDropdown(eventId) {
                 const statusIcon = getMatchStatus(match);
                 const teamA = match.competitor_a?.id || "TBD";
                 const teamB = match.competitor_b?.id || "TBD";
+                const full = `${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${match.venue} (${teamA} vs ${teamB})`;
+                const label = truncateForMobile(full);
                 sel.insertAdjacentHTML(
                     "beforeend",
-                    `<option value="${match.id}">${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${match.venue} (${teamA} vs ${teamB})</option>`
+                    `<option value="${match.id}">${label}</option>`
                 );
             });
             // Restore selection if still available
@@ -436,14 +494,12 @@ async function refreshMatchDropdown(eventId) {
             const statusIcon = getMatchStatus(match);
             const teamA = match.competitor_a?.id || "TBD";
             const teamB = match.competitor_b?.id || "TBD";
+            const full = `${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${match.venue} (${teamA} vs ${teamB})`;
+            const label = truncateForMobile(full);
 
             sel.insertAdjacentHTML(
                 "beforeend",
-                `<option value="${match.id}">
-                    ${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${
-                    match.venue
-                } (${teamA} vs ${teamB})
-                </option>`
+                `<option value="${match.id}">${label}</option>`
             );
         });
 
@@ -525,13 +581,18 @@ async function loadMatch(id, silent = false) {
     sessionStorage.setItem("currentMatch", id);
 
     const m = d.data();
+    usedOvertime = false; // reset per match
     origRed = m.competitor_a.id;
     origBlue = m.competitor_b.id;
     flipped = false;
     renderNamesAndScores(m.score_a ?? 0, m.score_b ?? 0);
 
     label.textContent = `${id} · ${m.venue}`;
-    timer.textContent = "10:00";
+    // Set default timer only if match not started yet
+    if (m.status === "scheduled") {
+        const secs = defaultDurationSeconds(m);
+        timer.textContent = `${pad((secs / 60) | 0)}:${pad(secs % 60)}`;
+    }
 
     // Role-based editing restriction
     let canEdit = true;
@@ -648,7 +709,7 @@ start.addEventListener("click", async () => {
     });
     pushLiveScores();
     startHidden();
-    countdown(toSeconds(timer.textContent));
+    startCountdown(toSeconds(timer.textContent));
 });
 end.addEventListener("click", async () => {
     if (end.disabled) return;
@@ -663,16 +724,66 @@ function toSeconds(txt) {
     const [m, s] = txt.split(":").map(Number);
     return m * 60 + s;
 }
-function countdown(sec) {
+function startCountdown(sec) {
     clearInterval(interval);
+    remainingSeconds = sec;
+    awaitingOvertime = false;
+    paused = false;
+    if (pauseBtn) {
+        pauseBtn.classList.remove("hidden");
+        pauseBtn.textContent = "Pause";
+        pauseBtn.disabled = false;
+    }
     const tick = () => {
-        timer.textContent = `${pad((sec / 60) | 0)}:${pad(sec % 60)}`;
-        if (sec-- <= 0) {
+        if (paused) return; // don't decrement while paused
+        timer.textContent = `${pad((remainingSeconds / 60) | 0)}:${pad(remainingSeconds % 60)}`;
+        if (remainingSeconds-- <= 0) {
             clearInterval(interval);
+            handleTimerExpired();
         }
     };
     tick();
     interval = setInterval(tick, 1000);
+}
+function handleTimerExpired() {
+    if (awaitingOvertime || usedOvertime) return; // already prompting or OT used
+    awaitingOvertime = true;
+    setTimeout(() => {
+        const v = prompt("Time expired. Enter overtime minutes (blank = none):", "");
+        if (v == null || v.trim() === "") {
+            awaitingOvertime = false;
+            return;
+        }
+        const mins = parseInt(v.trim(), 10);
+        if (!Number.isFinite(mins) || mins <= 0) {
+            alert("Invalid number of minutes. No overtime added.");
+            awaitingOvertime = false;
+            return;
+        }
+        usedOvertime = true;
+        // Visual indicator of overtime (pulse + color)
+        timer.classList.add("text-red-600", "animate-pulse");
+        startCountdown(mins * 60);
+        // After restarting, stop pulsing after 5s
+        setTimeout(() => timer.classList.remove("animate-pulse"), 5000);
+    }, 50);
+}
+
+// Pause / Resume logic
+if (pauseBtn) {
+    pauseBtn.addEventListener('click', () => {
+        if (pauseBtn.disabled) return;
+        paused = !paused;
+        if (paused) {
+            pauseBtn.textContent = 'Resume';
+            pauseBtn.classList.remove('bg-yellow-500','hover:bg-yellow-600');
+            pauseBtn.classList.add('bg-green-600','hover:bg-green-700');
+        } else {
+            pauseBtn.textContent = 'Pause';
+            pauseBtn.classList.remove('bg-green-600','hover:bg-green-700');
+            pauseBtn.classList.add('bg-yellow-500','hover:bg-yellow-600');
+        }
+    });
 }
 function startHidden() {
     start.classList.add("hidden");
@@ -716,3 +827,13 @@ window.addEventListener("beforeunload", () => {
     if (unsubLive) unsubLive();
     if (unsubMatchList) unsubMatchList();
 });
+
+// Utility to truncate long option text on very small screens
+function truncateForMobile(text) {
+    if (window.innerWidth >= 430) return text; // only truncate on very small devices
+    // Keep status + id + basic time + teams
+    // Original format: `${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${match.venue} (${teamA} vs ${teamB})`
+    // We'll drop venue and shorten date to HH:MM
+    return text.replace(/ – [^–]+ \(([^)]+)\)$/,' ($1)') // remove venue dash segment
+               .replace(/(\d{2}:\d{2}).*?–/,'$1 –');
+}

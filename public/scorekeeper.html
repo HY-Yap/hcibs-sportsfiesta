@@ -19,7 +19,7 @@
             };
         </script>
     </head>
-    <body class="bg-gray-100 min-h-screen">
+    <body class="bg-gray-100 min-h-screen overflow-x-hidden">
         <div id="nav-placeholder"></div>
         <!-- Dashboard Sidebar -->
         <div class="flex min-h-screen">
@@ -38,7 +38,7 @@
                 </nav>
             </aside>
             <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
-            <main class="flex-1 p-4 flex flex-col items-center relative">
+            <main class="flex-1 p-4 flex flex-col items-center relative w-full overflow-x-hidden">
                 <!-- Hamburger for mobile -->
                 <header class="flex items-center justify-between mb-4 md:hidden w-full px-4">
                     <button id="sidebar-toggle" aria-label="Open sidebar" class="text-primary text-3xl focus:outline-none">
@@ -87,7 +87,7 @@
                 <section id="panel" class="hidden w-full max-w-lg">
                     <h2
                         id="matchLabel"
-                        class="text-lg font-medium mb-6 text-center px-2"
+                        class="text-lg font-medium mb-6 text-center px-2 break-words"
                     ></h2>
                     <!-- Score layout -->
                     <div class="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -101,10 +101,11 @@
                                     –
                                 </p>
                             </div>
-                            <div class="text-center">
-                                <div id="timer" class="text-2xl font-mono">
-                                    10:00
-                                </div>
+                            <div class="flex flex-col items-center gap-2">
+                                <div id="timer" class="text-2xl font-mono">10:00</div>
+                                <button id="pauseBtn" class="hidden px-3 py-1 text-sm rounded bg-yellow-500 hover:bg-yellow-600 text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-yellow-400">
+                                    Pause
+                                </button>
                             </div>
                             <div class="text-center">
                                 <p
