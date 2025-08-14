@@ -24,6 +24,7 @@
                 z-index: 50;
             }
         </style>
+    <link rel="icon" href="data:,">
     </head>
     <body class="bg-gray-100 min-h-screen">
         <div id="nav-placeholder"></div>
@@ -43,7 +44,7 @@
                 id="sidebar-overlay"
                 class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"
             ></div>
-            <main class="flex-1 p-6">
+            <main class="flex-1 p-4 pt-6 sm:pt-7 md:pt-8">
                 <header
                     class="flex items-center justify-between mb-4 md:hidden"
                 >
@@ -67,5 +68,6 @@
         <script src="js/firebase-init.js" type="module"></script>
         <script src="js/auth.js" type="module"></script>
         <script type="module" src="js/dashboard.js"></script>
+    <script type="module" src="js/sidebar.js"></script>
     </body>
 </html>

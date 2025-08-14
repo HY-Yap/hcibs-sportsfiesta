@@ -1,6 +1,6 @@
 
 import { onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase-init.js";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -39,11 +39,12 @@ function renderSidebarLinks(role) {
 }
 
 function renderMainContent(role, userData) {
-  // Profile section
+  const fullName = userData.name || userData.displayName || userData.full_name || userData.email || auth.currentUser?.displayName || auth.currentUser?.email || "User";
   let profileSection = `
     <section class="bg-white rounded-lg shadow p-6 mb-6">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-2">Welcome, <span id="user-name">${userData.name || userData.displayName || userData.email || "User"}</span></h2>
-      <p class="text-gray-700 mb-2">Role: <span id="user-role">${role.charAt(0).toUpperCase() + role.slice(1)}</span></p>
+      <h2 class="text-2xl font-semibold text-gray-800 mb-2">Welcome, <span id="user-name">${fullName}</span></h2>
+      <p class="text-gray-700 mb-1">Role: <span id="user-role">${role.charAt(0).toUpperCase() + role.slice(1)}</span></p>
+  <p class="text-gray-700">Email: <span id="user-email">${userData.email || userData.userEmail || auth.currentUser?.email || ''}</span></p>
     </section>
   `;
   let eventsSection = "";
@@ -51,7 +52,7 @@ function renderMainContent(role, userData) {
     eventsSection = `
       <section class="bg-white rounded-lg shadow p-6 mb-6">
         <h3 class="text-xl font-semibold text-gray-800 mb-4">Participating Events</h3>
-        <ul id="events-list" class="space-y-4"></ul>
+        <ul id="events-list" class="space-y-3"></ul>
       </section>
     `;
   }
@@ -76,32 +77,57 @@ function renderMainContent(role, userData) {
       </form>
     </section>
   `;
-  mainContentEl.innerHTML = profileSection + eventsSection + accountSection;
+  if (mainContentEl) mainContentEl.innerHTML = profileSection + eventsSection + accountSection;
 }
 
-function renderEventsList(userData) {
-  const eventsListEl = document.getElementById("events-list");
-  if (!eventsListEl) return;
-  let events = Array.isArray(userData.events) ? userData.events : [];
-  let teams = typeof userData.teams === "object" && userData.teams !== null ? userData.teams : {};
-  if (!Array.isArray(events) || events.length === 0) {
-    eventsListEl.innerHTML = '<li class="text-gray-500">No events found.</li>';
+function formatEventName(id){
+  if(!id) return id;
+  return id
+    .replace(/badminton_singles/,'Badminton Singles')
+    .replace(/badminton_doubles/,'Badminton Doubles')
+    .replace(/frisbee5v5/,'Frisbee')
+    .replace(/basketball3v3/,'Basketball')
+    .replace(/_/g,' ');
+}
+
+function renderEventsDerived(list){
+  const el = document.getElementById('events-list');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML = '<li class="text-gray-500">No events found.</li>';
     return;
   }
-  eventsListEl.innerHTML = "";
-  for (const eventId of events) {
-    let eventName = eventId;
-    // Only show team name for team events
-    let teamName = "";
-    if (["badminton_doubles", "frisbee5v5", "basketball3v3"].includes(eventId) && teams[eventId]) {
-      teamName = teams[eventId];
+  el.innerHTML='';
+  list.forEach(ev => {
+    el.insertAdjacentHTML('beforeend', `<li class="flex items-center gap-4 py-1">
+      <span class="font-semibold">${formatEventName(ev.event_id)}</span>
+      <span class="text-gray-600 text-sm">${ev.teamName ? 'Team: <span class=\\"font-bold\\">'+ev.teamName+'</span>' : 'Individual'}</span>
+    </li>`);
+  });
+}
+
+async function deriveUserEvents(user){
+  const eventsMap = new Map(); // event_id -> {event_id, teamName?}
+  // Team-based participation
+  const teamsSnap = await getDocs(collection(db,'teams'));
+  teamsSnap.forEach(tDoc => {
+    const t = tDoc.data();
+    if(t.member_emails && t.member_emails.includes(user.email)){
+      eventsMap.set(t.event_id, { event_id: t.event_id, teamName: t.name || '' });
     }
-    eventsListEl.insertAdjacentHTML("beforeend",
-      `<li class="border-b pb-2"><span class="font-semibold">${eventName}</span> ` +
-      (teamName ? `<span class="ml-2 text-gray-600">Team: <span class="font-bold">${teamName}</span></span>` : `<span class="ml-2 text-gray-600">Individual</span>`) +
-      `</li>`
-    );
-  }
+  });
+  // Individual matches participation
+  const matchesSnap = await getDocs(collection(db,'matches'));
+  matchesSnap.forEach(mDoc => {
+    const m = mDoc.data();
+    if(!m.event_id) return;
+    const aId = m.competitor_a?.id; const bId = m.competitor_b?.id;
+    const aEmail = m.competitor_a?.email; const bEmail = m.competitor_b?.email;
+    if(aId === user.uid || bId === user.uid || aEmail === user.email || bEmail === user.email){
+      if(!eventsMap.has(m.event_id)) eventsMap.set(m.event_id,{event_id:m.event_id});
+    }
+  });
+  return Array.from(eventsMap.values()).sort((a,b)=> a.event_id.localeCompare(b.event_id));
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -132,7 +158,15 @@ onAuthStateChanged(auth, async (user) => {
   // Only render main dashboard content if #main-content exists
   if (mainContentEl) {
     renderMainContent(role, userData);
-    if (role === "player") renderEventsList(userData);
+    if (role === 'player') {
+      try {
+        const evList = await deriveUserEvents(user);
+        renderEventsDerived(evList);
+      } catch(err){
+        console.warn('Failed to derive events', err);
+        renderEventsDerived([]);
+      }
+    }
   }
 
   // Password change logic (direct change)
@@ -190,16 +224,5 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   // Sidebar hamburger logic
-  if (toggleBtn && sidebar && overlay) {
-    toggleBtn.addEventListener("click", () => {
-      sidebar.classList.toggle("-translate-x-full");
-      overlay.classList.toggle("hidden");
-      toggleBtn.classList.add("hidden");
-    });
-    overlay.addEventListener("click", () => {
-      sidebar.classList.add("-translate-x-full");
-      overlay.classList.add("hidden");
-      toggleBtn.classList.remove("hidden");
-    });
-  }
+  // (Removed per centralised sidebar.js controller to avoid double-binding)
 });
