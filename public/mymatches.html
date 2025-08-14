@@ -37,16 +37,16 @@
 				</nav>
 			</aside>
 			<div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
-			<main class="flex-1 p-4 flex flex-col items-center relative">
+			<main class="flex-1 p-0 flex flex-col items-center relative overflow-x-hidden">
 				<header class="flex items-center justify-between mb-4 md:hidden w-full px-4">
 					<button id="sidebar-toggle" aria-label="Open sidebar" class="text-primary text-3xl focus:outline-none">
 						&#9776;
 					</button>
 					<h2 id="dashboard-title" class="text-xl font-semibold">My Matches</h2>
 				</header>
-				<h1 class="text-3xl font-semibold mb-6 text-center">My Matches</h1>
-				<section id="matches-section" class="w-full max-w-3xl">
-					<div id="matches-container" class="bg-white rounded-lg shadow p-4">
+				<h1 class="text-3xl font-semibold mb-6 mt-4 text-center px-4">My Matches</h1>
+				<section id="matches-section" class="w-full px-4">
+					<div id="matches-container" class="bg-white rounded-lg shadow p-2 sm:p-4 md:p-6 w-full overflow-x-auto">
 						<p id="matches-msg" class="text-red-600 mb-4 hidden text-center"></p>
 						<!-- Matches table will be injected here -->
 					</div>

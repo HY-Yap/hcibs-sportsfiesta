@@ -18,7 +18,7 @@ function renderSidebarLinks(role) {
   sidebarNavEl.insertAdjacentHTML("beforeend",
     `<a href="dashboard.html" id="profile-link" class="block py-2 px-3 rounded hover:bg-accent/20 hover:text-accent font-semibold transition">My Profile</a>`
   );
-  if (role === "user") {
+  if (role === "player") {
     sidebarNavEl.insertAdjacentHTML("beforeend",
       `<a href="mymatches.html" id="matches-link" class="block py-2 px-3 rounded hover:bg-accent/20 hover:text-accent font-semibold transition">My Matches</a>`
     );
@@ -47,7 +47,7 @@ function renderMainContent(role, userData) {
     </section>
   `;
   let eventsSection = "";
-  if (role === "user") {
+  if (role === "player") {
     eventsSection = `
       <section class="bg-white rounded-lg shadow p-6 mb-6">
         <h3 class="text-xl font-semibold text-gray-800 mb-4">Participating Events</h3>
@@ -132,7 +132,7 @@ onAuthStateChanged(auth, async (user) => {
   // Only render main dashboard content if #main-content exists
   if (mainContentEl) {
     renderMainContent(role, userData);
-    if (role === "user") renderEventsList(userData);
+    if (role === "player") renderEventsList(userData);
   }
 
   // Password change logic (direct change)

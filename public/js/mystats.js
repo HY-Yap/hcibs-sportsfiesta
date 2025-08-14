@@ -1,6 +1,5 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db, auth } from "./firebase-init.js";
+import { auth } from "./firebase-init.js";
 
 const statsMsg = document.getElementById("stats-msg");
 const statsTables = document.getElementById("stats-tables");
@@ -47,12 +46,15 @@ function renderStatsTable(eventLabel, stats) {
   `;
 }
 
+import { collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { db } from "./firebase-init.js";
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     showMsg("Please log in to view your stats.");
     return;
   }
-  // Get user data
+  // Get user data from Firestore
   const userRef = doc(db, "users", user.uid);
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) {
@@ -60,7 +62,8 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
   const userData = userSnap.data();
-  const role = userData.role || "user";
+  const tokenResult = await user.getIdTokenResult();
+  const role = tokenResult.claims.role || userData.role || "user";
   if (role === "scorekeeper" || role === "admin") {
     alert("You do not need to view this page. Redirecting to dashboard.");
     window.location.href = "dashboard.html";
@@ -73,11 +76,11 @@ onAuthStateChanged(auth, async (user) => {
   for (const event of EVENTS) {
     let stats = { played: "NA", wins: "NA", draws: "NA", losses: "NA", placing: "NA" };
     if (userEvents.includes(event.id)) {
-      // Query matches for this event
       const teamId = userTeams[event.id];
+      let played = 0, wins = 0, draws = 0, losses = 0;
+      // Query matches for this event
       const q = query(collection(db, "matches"), where("event_id", "==", event.id));
       const snap = await getDocs(q);
-      let played = 0, wins = 0, draws = 0, losses = 0;
       for (const docSnap of snap.docs) {
         const m = docSnap.data();
         // Check if user/team is a participant
@@ -108,28 +111,8 @@ onAuthStateChanged(auth, async (user) => {
           }
         }
       }
-      stats = { played, wins, draws, losses, placing: "Calculating..." };
-      // Placing: try to get from teams collection if teamId exists
-      if (teamId) {
-        try {
-          const teamRef = doc(db, "teams", `${event.id}__${teamId}`);
-          const teamSnap = await getDoc(teamRef);
-          if (teamSnap.exists() && teamSnap.data().placing) {
-            stats.placing = teamSnap.data().placing;
-          }
-        } catch {}
-      }
-      // If individual, try from users collection
-      if (!teamId) {
-        try {
-          const userRef2 = doc(db, "users", user.uid);
-          const userSnap2 = await getDoc(userRef2);
-          if (userSnap2.exists() && userSnap2.data().placing && userSnap2.data().placing[event.id]) {
-            stats.placing = userSnap2.data().placing[event.id];
-          }
-        } catch {}
-      }
-      if (stats.placing === "Calculating...") stats.placing = "NA";
+      stats = { played, wins, draws, losses, placing: "NA" };
+      // Optionally, you can add logic to get placing from userData or another global if needed
     }
     tablesHtml += renderStatsTable(event.label, stats);
   }
