@@ -20,17 +20,19 @@ function hideMsg() {
   statsMsg.classList.add("hidden");
 }
 
-function renderStatsTable(eventLabel, stats) {
+function renderStatsTable(eventLabel, stats, eventId) {
+  const hasGroup = (eventId === 'basketball3v3' || eventId === 'frisbee5v5');
   return `
     <div class="overflow-x-auto flex justify-center">
-  <table class="min-w-full w-full table-auto whitespace-nowrap text-sm mx-auto">
+      <table class="min-w-full w-full table-auto whitespace-nowrap text-sm mx-auto">
         <thead class="bg-primary text-white">
           <tr>
             <th class="px-4 py-2">Matches Played</th>
             <th class="px-4 py-2">Wins</th>
             <th class="px-4 py-2">Draws</th>
             <th class="px-4 py-2">Losses</th>
-            <th class="px-4 py-2">Current Placing</th>
+            ${hasGroup ? '<th class="px-4 py-2">Group Ranking</th>' : ''}
+            <th class="px-4 py-2">Overall Ranking</th>
           </tr>
         </thead>
         <tbody>
@@ -39,6 +41,7 @@ function renderStatsTable(eventLabel, stats) {
             <td class="text-center">${stats.wins}</td>
             <td class="text-center">${stats.draws}</td>
             <td class="text-center">${stats.losses}</td>
+            ${hasGroup ? `<td class="text-center">${stats.groupPlacing ?? 'NA'}</td>` : ''}
             <td class="text-center">${stats.placing}</td>
           </tr>
         </tbody>
@@ -109,23 +112,23 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   async function computeStats(eventId){
-    // Query matches for this event
     const q = query(collection(db,'matches'), where('event_id','==', eventId));
     const snap = await getDocs(q);
-    if(snap.empty) return { played:'NA', wins:'NA', draws:'NA', losses:'NA', placing:'NA' };
+    if(snap.empty) return { played:'NA', wins:'NA', draws:'NA', losses:'NA', placing:'NA', groupPlacing:'NA' };
 
-    // Aggregate per competitor
-    const statsByCompetitor = new Map();
-    const ensure = (id) => { if(!statsByCompetitor.has(id)) statsByCompetitor.set(id,{ id, played:0,wins:0,draws:0,losses:0}); return statsByCompetitor.get(id); };
+    const overall = new Map();
+    const qualifierMatches = [];
+    const ensureOverall = (id) => { if(!overall.has(id)) overall.set(id,{ id, played:0,wins:0,draws:0,losses:0}); return overall.get(id); };
 
     snap.docs.forEach(docSnap => {
       const m = docSnap.data();
       const aId = m.competitor_a?.id; const bId = m.competitor_b?.id;
       if(!aId || !bId) return;
-      if(isPlaceholderId(aId, eventId, m.match_type) || isPlaceholderId(bId, eventId, m.match_type)) return; // skip placeholder until resolved
-      if(m.status === 'void') return; // ignore voided
-      if(m.status !== 'final') return; // only count completed matches
-      const a = ensure(aId); const b = ensure(bId);
+      if(isPlaceholderId(aId, eventId, m.match_type) || isPlaceholderId(bId, eventId, m.match_type)) return;
+      if(m.status === 'void') return;
+      if(m.status !== 'final') return; // only finished matches
+      if(m.match_type === 'qualifier') qualifierMatches.push(m);
+      const a = ensureOverall(aId); const b = ensureOverall(bId);
       a.played++; b.played++;
       const aScore = m.score_a ?? 0; const bScore = m.score_b ?? 0;
       if(aScore > bScore){ a.wins++; b.losses++; }
@@ -133,38 +136,75 @@ onAuthStateChanged(auth, async (user) => {
       else { a.draws++; b.draws++; }
     });
 
-    if(statsByCompetitor.size === 0) return { played:'NA', wins:'NA', draws:'NA', losses:'NA', placing:'NA' };
+    if(overall.size === 0) return { played:'NA', wins:'NA', draws:'NA', losses:'NA', placing:'NA', groupPlacing:'NA' };
 
-    // Sort competitors for ranking
-    const list = Array.from(statsByCompetitor.values()).sort((x,y)=>{
+    const list = Array.from(overall.values()).sort((x,y)=>{
       if(y.wins !== x.wins) return y.wins - x.wins;
       if(y.draws !== x.draws) return y.draws - x.draws;
       if(y.played !== x.played) return y.played - x.played;
       return x.id.localeCompare(y.id);
     });
-
-    // Assign placements with ties (1,2,2,4 pattern)
     let prev=null; list.forEach((item,idx)=>{
-      if(prev && prev.wins===item.wins && prev.draws===item.draws && prev.played===item.played){
-        item.place = prev.place;
-      } else {
-        item.place = idx+1;
-      }
+      if(prev && prev.wins===item.wins && prev.draws===item.draws && prev.played===item.played){ item.place = prev.place; }
+      else { item.place = idx+1; }
       prev=item;
     });
 
-    // Determine user's competitor id(s) for this event
     const userSuffixes = userTeamSuffixesByEvent[eventId] || new Set();
     const userIds = new Set([...userSuffixes, user.uid]);
     const userEntry = list.find(row => userIds.has(row.id));
-    if(!userEntry) return { played:'NA', wins:'NA', draws:'NA', losses:'NA', placing:'NA' };
-    return { played:userEntry.played, wins:userEntry.wins, draws:userEntry.draws, losses:userEntry.losses, placing: ordinal(userEntry.place) };
+    if(!userEntry) return { played:'NA', wins:'NA', draws:'NA', losses:'NA', placing:'NA', groupPlacing:'NA' };
+
+    // Group ranking (basketball & frisbee only) based on qualifier round-robin pool
+    let groupPlacing = 'NA';
+    if((eventId === 'basketball3v3' || eventId === 'frisbee5v5') && qualifierMatches.length){
+      // Determine user's pool from any qualifier they participated in
+      const userPool = qualifierMatches.reduce((pool, m) => {
+        if(pool) return pool;
+        const aId = m.competitor_a?.id; const bId = m.competitor_b?.id;
+        if(userIds.has(aId) || userIds.has(bId)) return m.pool || null;
+        return null;
+      }, null);
+      if(userPool){
+        // Aggregate pool-only stats from qualifier matches in that pool
+        const poolStats = new Map();
+        const ensurePool = (id) => { if(!poolStats.has(id)) poolStats.set(id,{ id, played:0,wins:0,draws:0,losses:0}); return poolStats.get(id); };
+        qualifierMatches.filter(m => m.pool === userPool).forEach(m => {
+          const aId = m.competitor_a?.id; const bId = m.competitor_b?.id;
+          if(!aId || !bId) return;
+          if(isPlaceholderId(aId, eventId, m.match_type) || isPlaceholderId(bId, eventId, m.match_type)) return;
+          const a = ensurePool(aId); const b = ensurePool(bId);
+          a.played++; b.played++;
+          const aScore = m.score_a ?? 0; const bScore = m.score_b ?? 0;
+          if(aScore > bScore){ a.wins++; b.losses++; }
+          else if(bScore > aScore){ b.wins++; a.losses++; }
+          else { a.draws++; b.draws++; }
+        });
+        if(poolStats.size){
+          const poolList = Array.from(poolStats.values()).sort((x,y)=>{
+            if(y.wins !== x.wins) return y.wins - x.wins;
+            if(y.draws !== x.draws) return y.draws - x.draws;
+            if(y.played !== x.played) return y.played - x.played;
+            return x.id.localeCompare(y.id);
+          });
+          let prevP=null; poolList.forEach((item,idx)=>{
+            if(prevP && prevP.wins===item.wins && prevP.draws===item.draws && prevP.played===item.played){ item.place = prevP.place; }
+            else { item.place = idx+1; }
+            prevP=item;
+          });
+          const poolUser = poolList.find(r => userIds.has(r.id));
+            if(poolUser) groupPlacing = ordinal(poolUser.place);
+        }
+      }
+    }
+
+    return { played:userEntry.played, wins:userEntry.wins, draws:userEntry.draws, losses:userEntry.losses, placing: ordinal(userEntry.place), groupPlacing };
   }
 
   async function renderEvent(eventId){
     statsTables.innerHTML = '<p class="p-4 text-gray-500">Loading…</p>';
     const stats = await computeStats(eventId);
-    statsTables.innerHTML = renderStatsTable(EVENTS.find(e=>e.id===eventId)?.label || eventId, stats);
+  statsTables.innerHTML = renderStatsTable(EVENTS.find(e=>e.id===eventId)?.label || eventId, stats, eventId);
   }
 
   tabButtons.forEach(btn => btn.addEventListener('click', ()=> {
