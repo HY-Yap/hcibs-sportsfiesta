@@ -13,7 +13,7 @@
 
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import key from "./serviceAccountKey.json" assert { type: "json" };
+import key from "../serviceAccountKey.json" assert { type: "json" };
 
 initializeApp({ credential: cert(key), projectId: "hcibs-sportsfiesta" });
 const db = getFirestore();
