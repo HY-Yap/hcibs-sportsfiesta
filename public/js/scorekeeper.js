@@ -306,22 +306,34 @@ onAuthStateChanged(auth, async (user) => {
         // Fallback: read Firestore user doc if custom claim not present yet
         if (!role) {
             try {
-                const snap = await getDocs(query(collection(db, "users"), where("uid", "==", user.uid)));
+                const snap = await getDocs(
+                    query(collection(db, "users"), where("uid", "==", user.uid))
+                );
                 // If users collection documents keyed by UID instead, try direct get
                 if (snap.empty) {
                     const direct = await getDocs(collection(db, "users"));
-                    direct.forEach(d => { if (d.id === user.uid && !role) role = d.data().role; });
+                    direct.forEach((d) => {
+                        if (d.id === user.uid && !role) role = d.data().role;
+                    });
                 } else {
-                    snap.forEach(d => { if (!role) role = d.data().role; });
+                    snap.forEach((d) => {
+                        if (!role) role = d.data().role;
+                    });
                 }
-            } catch (_) { /* ignore */ }
+            } catch (_) {
+                /* ignore */
+            }
         }
         if (!role) {
             // Try direct doc by id if schema is users/{uid}
             try {
                 const directDoc = await getDocs(collection(db, "users"));
-                directDoc.forEach(d => { if (d.id === user.uid && !role) role = d.data().role; });
-            } catch (_) { /* ignore */ }
+                directDoc.forEach((d) => {
+                    if (d.id === user.uid && !role) role = d.data().role;
+                });
+            } catch (_) {
+                /* ignore */
+            }
         }
         if (role !== "scorekeeper" && role !== "admin") {
             return err("Not a scorekeeper account.");
@@ -371,12 +383,16 @@ async function refreshMatchDropdown(eventId) {
 
     unsubMatchList = onSnapshot(q, (snap) => {
         (async () => {
-            const allMatches = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+            const allMatches = snap.docs.map((d) => ({
+                id: d.id,
+                ...d.data(),
+            }));
             // Get current user and role
             let user = window.firebase.auth.currentUser;
             let role = "scorekeeper";
             if (user) {
-                const token = user.getIdTokenResult && await user.getIdTokenResult();
+                const token =
+                    user.getIdTokenResult && (await user.getIdTokenResult());
                 if (token && token.claims && token.claims.role) {
                     role = token.claims.role;
                 }
@@ -386,10 +402,13 @@ async function refreshMatchDropdown(eventId) {
                 // Scorekeeper: only show matches they are assigned to
                 if (role === "scorekeeper") {
                     // Match may store email in scorekeeper and uid in scorekeeper_uid
-                    if (!match.scorekeeper && !match.scorekeeper_uid) return false;
+                    if (!match.scorekeeper && !match.scorekeeper_uid)
+                        return false;
                     if (user) {
                         const emailMatch = match.scorekeeper === user.email;
-                        const uidMatch = match.scorekeeper === user.uid || match.scorekeeper_uid === user.uid;
+                        const uidMatch =
+                            match.scorekeeper === user.uid ||
+                            match.scorekeeper_uid === user.uid;
                         if (!emailMatch && !uidMatch) return false;
                     } else return false;
                 }
@@ -433,7 +452,9 @@ async function refreshMatchDropdown(eventId) {
                 const statusIcon = getMatchStatus(match);
                 const teamA = match.competitor_a?.id || "TBD";
                 const teamB = match.competitor_b?.id || "TBD";
-                const full = `${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${match.venue} (${teamA} vs ${teamB})`;
+                const full = `${statusIcon} ${match.id} – ${fmt(
+                    match.scheduled_at
+                )} – ${match.venue} (${teamA} vs ${teamB})`;
                 const label = truncateForMobile(full);
                 sel.insertAdjacentHTML(
                     "beforeend",
@@ -453,70 +474,6 @@ async function refreshMatchDropdown(eventId) {
             }
             load.disabled = !sel.value;
         })();
-
-        // Sort matches: Live first, then by priority, then by time, then by number
-        const sortedMatches = visibleMatches.sort((a, b) => {
-            // Live matches first
-            if (a.status === "live" && b.status !== "live") return -1;
-            if (b.status === "live" && a.status !== "live") return 1;
-
-            // Then by match type priority
-            const aPriority = getMatchPriority(a.id);
-            const bPriority = getMatchPriority(b.id);
-            if (aPriority !== bPriority) return aPriority - bPriority;
-
-            // Then by scheduled time
-            const aTime = a.scheduled_at.toMillis();
-            const bTime = b.scheduled_at.toMillis();
-            if (aTime !== bTime) return aTime - bTime;
-
-            // Finally by match number
-            const aMatch = extractMatchNumber(a.id);
-            const bMatch = extractMatchNumber(b.id);
-            return aMatch - bMatch;
-        });
-
-        // Remember current selection
-        const currentSelection = sel.value;
-
-        // Clear and repopulate dropdown
-        sel.innerHTML = "";
-
-        if (sortedMatches.length === 0) {
-            sel.insertAdjacentHTML(
-                "beforeend",
-                `<option value="">No matches available</option>`
-            );
-            load.disabled = true;
-            return;
-        }
-
-        sortedMatches.forEach((match) => {
-            const statusIcon = getMatchStatus(match);
-            const teamA = match.competitor_a?.id || "TBD";
-            const teamB = match.competitor_b?.id || "TBD";
-            const full = `${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${match.venue} (${teamA} vs ${teamB})`;
-            const label = truncateForMobile(full);
-
-            sel.insertAdjacentHTML(
-                "beforeend",
-                `<option value="${match.id}">${label}</option>`
-            );
-        });
-
-        // Restore selection if still available
-        if (
-            currentSelection &&
-            Array.from(sel.options).some(
-                (opt) => opt.value === currentSelection
-            )
-        ) {
-            sel.value = currentSelection;
-        } else {
-            sel.selectedIndex = 0;
-        }
-
-        load.disabled = !sel.value;
     });
 }
 
@@ -585,7 +542,11 @@ async function loadMatch(id, silent = false) {
     usedOvertime = false; // reset per match
     origRed = m.competitor_a.id;
     origBlue = m.competitor_b.id;
-    flipped = false;
+    flipped = false; // 🔥 RESET flip state for new match
+
+    // 🔥 FIX: Reset all score button handlers for new match
+    setupScoreButtons();
+
     renderNamesAndScores(m.score_a ?? 0, m.score_b ?? 0);
 
     label.textContent = `${id} · ${m.venue}`;
@@ -606,19 +567,20 @@ async function loadMatch(id, silent = false) {
     if (role === "scorekeeper") {
         // Only allow editing if scorekeeper assigned (email or uid)
         const emailMatch = m.scorekeeper === user.email;
-        const uidMatch = m.scorekeeper === user.uid || m.scorekeeper_uid === user.uid;
+        const uidMatch =
+            m.scorekeeper === user.uid || m.scorekeeper_uid === user.uid;
         const assigned = emailMatch || uidMatch;
         if (!assigned) canEdit = false;
     }
 
     // Enable/disable controls based on canEdit
-    [start, end, ...document.querySelectorAll('.scoreBtn')].forEach(btn => {
+    [start, end, ...document.querySelectorAll(".scoreBtn")].forEach((btn) => {
         if (canEdit) {
             btn.disabled = false;
-            btn.classList.remove('opacity-60', 'cursor-not-allowed');
+            btn.classList.remove("opacity-60", "cursor-not-allowed");
         } else {
             btn.disabled = true;
-            btn.classList.add('opacity-60', 'cursor-not-allowed');
+            btn.classList.add("opacity-60", "cursor-not-allowed");
         }
     });
     if (!canEdit) {
@@ -668,15 +630,12 @@ swapBtn.onclick = () => {
     if (swapBtn.disabled) return;
     flipped = !flipped;
     [sA.textContent, sB.textContent] = [sB.textContent, sA.textContent];
-    document.querySelectorAll(".scoreBtn").forEach((btn) => {
-        btn.dataset.side = btn.dataset.side === "a" ? "b" : "a";
-    });
     const { score_a, score_b } = logicalScores();
     renderNamesAndScores(score_a, score_b);
 };
 timer.parentNode.insertBefore(swapBtn, timer.nextSibling);
 
-/* ───── score buttons (debounced live write) ───── */
+/* ───── score buttons setup ───── */
 let debounceTimer = null;
 function pushLiveScores() {
     const { score_a, score_b } = logicalScores();
@@ -686,19 +645,41 @@ function pushLiveScores() {
         200
     );
 }
-document.querySelectorAll(".scoreBtn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-        if (start.classList.contains("hidden") && !end.disabled) {
-            const logical = btn.dataset.side === "a" ? 0 : 1;
-            const span = flipped ? [sB, sA][logical] : [sA, sB][logical];
-            span.textContent = Math.max(
-                0,
-                Number(span.textContent) + Number(btn.dataset.delta)
-            );
-            pushLiveScores();
-        }
+
+// 🔥 FIXED: Setup score buttons with proper event listeners
+function setupScoreButtons() {
+    // Remove any existing event listeners by cloning nodes
+    document.querySelectorAll(".scoreBtn").forEach((btn) => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
     });
-});
+
+    // Add fresh event listeners
+    document.querySelectorAll(".scoreBtn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            if (start.classList.contains("hidden") && !end.disabled) {
+                // 🔥 SIMPLE: Left buttons update left display, right buttons update right display
+                // Don't try to be smart about flipping - let the swap handle the logic
+
+                let targetSpan;
+                if (btn.dataset.side === "a") {
+                    targetSpan = sA; // Always update scoreA display
+                } else {
+                    targetSpan = sB; // Always update scoreB display
+                }
+
+                targetSpan.textContent = Math.max(
+                    0,
+                    Number(targetSpan.textContent) + Number(btn.dataset.delta)
+                );
+                pushLiveScores();
+            }
+        });
+    });
+}
+
+// 🔥 Initial setup of score buttons
+setupScoreButtons();
 
 /* ───── match control (start / end) ───── */
 start.addEventListener("click", async () => {
@@ -712,7 +693,12 @@ start.addEventListener("click", async () => {
 });
 end.addEventListener("click", async () => {
     if (end.disabled) return;
-    if (!confirm("Are you sure you want to end the match? This action cannot be undone.")) return;
+    if (
+        !confirm(
+            "Are you sure you want to end the match? This action cannot be undone."
+        )
+    )
+        return;
     clearInterval(interval);
     await updateDoc(docRef, { status: "final", ...logicalScores() });
     finishUI();
@@ -735,7 +721,9 @@ function startCountdown(sec) {
     }
     const tick = () => {
         if (paused) return; // don't decrement while paused
-        timer.textContent = `${pad((remainingSeconds / 60) | 0)}:${pad(remainingSeconds % 60)}`;
+        timer.textContent = `${pad((remainingSeconds / 60) | 0)}:${pad(
+            remainingSeconds % 60
+        )}`;
         if (remainingSeconds-- <= 0) {
             clearInterval(interval);
             handleTimerExpired();
@@ -748,7 +736,10 @@ function handleTimerExpired() {
     if (awaitingOvertime || usedOvertime) return; // already prompting or OT used
     awaitingOvertime = true;
     setTimeout(() => {
-        const v = prompt("Time expired. Enter overtime minutes (blank = none):", "");
+        const v = prompt(
+            "Time expired. Enter overtime minutes (blank = none):",
+            ""
+        );
         if (v == null || v.trim() === "") {
             awaitingOvertime = false;
             return;
@@ -770,17 +761,17 @@ function handleTimerExpired() {
 
 // Pause / Resume logic
 if (pauseBtn) {
-    pauseBtn.addEventListener('click', () => {
+    pauseBtn.addEventListener("click", () => {
         if (pauseBtn.disabled) return;
         paused = !paused;
         if (paused) {
-            pauseBtn.textContent = 'Resume';
-            pauseBtn.classList.remove('bg-yellow-500','hover:bg-yellow-600');
-            pauseBtn.classList.add('bg-green-600','hover:bg-green-700');
+            pauseBtn.textContent = "Resume";
+            pauseBtn.classList.remove("bg-yellow-500", "hover:bg-yellow-600");
+            pauseBtn.classList.add("bg-green-600", "hover:bg-green-700");
         } else {
-            pauseBtn.textContent = 'Pause';
-            pauseBtn.classList.remove('bg-green-600','hover:bg-green-700');
-            pauseBtn.classList.add('bg-yellow-500','hover:bg-yellow-600');
+            pauseBtn.textContent = "Pause";
+            pauseBtn.classList.remove("bg-green-600", "hover:bg-green-700");
+            pauseBtn.classList.add("bg-yellow-500", "hover:bg-yellow-600");
         }
     });
 }
@@ -833,6 +824,7 @@ function truncateForMobile(text) {
     // Keep status + id + basic time + teams
     // Original format: `${statusIcon} ${match.id} – ${fmt(match.scheduled_at)} – ${match.venue} (${teamA} vs ${teamB})`
     // We'll drop venue and shorten date to HH:MM
-    return text.replace(/ – [^–]+ \(([^)]+)\)$/,' ($1)') // remove venue dash segment
-               .replace(/(\d{2}:\d{2}).*?–/,'$1 –');
+    return text
+        .replace(/ – [^–]+ \(([^)]+)\)$/, " ($1)") // remove venue dash segment
+        .replace(/(\d{2}:\d{2}).*?–/, "$1 –");
 }
