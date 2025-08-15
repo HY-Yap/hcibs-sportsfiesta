@@ -385,12 +385,13 @@ async function refreshMatchDropdown(eventId) {
             const visibleMatches = allMatches.filter((match) => {
                 // Scorekeeper: only show matches they are assigned to
                 if (role === "scorekeeper") {
-                    if (!match.scorekeeper) return false;
-                    if (Array.isArray(match.scorekeeper)) {
-                        if (!user || !match.scorekeeper.includes(user.uid)) return false;
-                    } else {
-                        if (!user || match.scorekeeper !== user.uid) return false;
-                    }
+                    // Match may store email in scorekeeper and uid in scorekeeper_uid
+                    if (!match.scorekeeper && !match.scorekeeper_uid) return false;
+                    if (user) {
+                        const emailMatch = match.scorekeeper === user.email;
+                        const uidMatch = match.scorekeeper === user.uid || match.scorekeeper_uid === user.uid;
+                        if (!emailMatch && !uidMatch) return false;
+                    } else return false;
                 }
                 // Basic visibility check
                 if (!shouldShowMatch(match, allMatches)) return false;
@@ -603,13 +604,11 @@ async function loadMatch(id, silent = false) {
         role = token.claims.role || "scorekeeper";
     }
     if (role === "scorekeeper") {
-        // Only allow editing if scorekeeper assigned
-        const assigned = Array.isArray(m.scorekeeper)
-            ? m.scorekeeper.includes(user.uid)
-            : m.scorekeeper === user.uid;
-        if (!assigned) {
-            canEdit = false;
-        }
+        // Only allow editing if scorekeeper assigned (email or uid)
+        const emailMatch = m.scorekeeper === user.email;
+        const uidMatch = m.scorekeeper === user.uid || m.scorekeeper_uid === user.uid;
+        const assigned = emailMatch || uidMatch;
+        if (!assigned) canEdit = false;
     }
 
     // Enable/disable controls based on canEdit

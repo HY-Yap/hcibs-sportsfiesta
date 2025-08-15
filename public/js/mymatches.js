@@ -37,21 +37,21 @@ function fmtDT(ts) {
 function tableShell(rowsHtml) {
   return `
     <div class="overflow-x-auto">
-      <table class="min-w-full table-fixed whitespace-nowrap text-sm">
+      <table class="min-w-full table-fixed whitespace-nowrap text-sm md:text-base">
         <thead class="bg-primary text-white">
           <tr>
-            <th class="w-20 px-2 py-1">Match</th>
-            <th class="w-44 px-2 py-1">Date&nbsp;Time</th>
-            <th class="px-2 py-1">Player/Team&nbsp;1</th>
-            <th class="w-16 px-2 py-1 text-center">Score</th>
-            <th class="px-2 py-1">Player/Team&nbsp;2</th>
-            <th class="w-16 px-2 py-1 text-center">Score</th>
-            <th class="w-20 px-2 py-1 text-center">Venue</th>
-            <th class="w-24 px-2 py-1 text-center">Status</th>
+            <th class="w-20 px-3 py-2">Match</th>
+            <th class="w-48 px-3 py-2">Date&nbsp;Time</th>
+            <th class="px-3 py-2">Player/Team&nbsp;1</th>
+            <th class="w-20 px-3 py-2 text-center">Score</th>
+            <th class="px-3 py-2">Player/Team&nbsp;2</th>
+            <th class="w-20 px-3 py-2 text-center">Score</th>
+            <th class="w-24 px-3 py-2 text-center">Venue</th>
+            <th class="w-28 px-3 py-2 text-center">Status</th>
           </tr>
         </thead>
         <tbody>
-          ${rowsHtml || `<tr><td colspan="8" class="p-4 text-center text-gray-500">No matches.</td></tr>`}
+          ${rowsHtml || `<tr><td colspan="8" class="p-6 text-center text-gray-500">No matches.</td></tr>`}
         </tbody>
       </table>
     </div>`;
@@ -153,14 +153,14 @@ onAuthStateChanged(auth, async (user) => {
       const aCls = cellColour(aWin,bWin); const bCls = cellColour(bWin,aWin);
       return `
         <tr class="even:bg-gray-50 text-center">
-          <td class="font-mono">${m.id}</td>
-          <td>${fmtDT(m.scheduled_at)}</td>
-          <td class="font-semibold ${aCls}">${compA}</td>
-          <td class="font-semibold ${aCls} text-center">${m.score_a ?? '-'}</td>
-          <td class="font-semibold ${bCls}">${compB}</td>
-          <td class="font-semibold ${bCls} text-center">${m.score_b ?? '-'}</td>
-          <td class="text-center">${m.venue || '-'}</td>
-          <td class="text-center">${badge(m.status)}</td>
+          <td class="font-mono px-3 py-2">${m.id}</td>
+          <td class="px-3 py-2">${fmtDT(m.scheduled_at)}</td>
+          <td class="font-semibold ${aCls} px-3 py-2">${compA}</td>
+          <td class="font-semibold ${aCls} text-center px-3 py-2">${m.score_a ?? '-'}</td>
+          <td class="font-semibold ${bCls} px-3 py-2">${compB}</td>
+          <td class="font-semibold ${bCls} text-center px-3 py-2">${m.score_b ?? '-'}</td>
+          <td class="text-center px-3 py-2">${m.venue || '-'}</td>
+          <td class="text-center px-3 py-2">${badge(m.status)}</td>
         </tr>`;
     }).join('');
     matchesContainer.innerHTML = tableShell(rows);

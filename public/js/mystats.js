@@ -21,28 +21,24 @@ function hideMsg() {
 }
 
 function renderStatsTable(eventLabel, stats, eventId) {
-  const hasGroup = (eventId === 'basketball3v3' || eventId === 'frisbee5v5');
+  const hasGroup = ['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId);
   return `
     <div class="overflow-x-auto flex justify-center">
-      <table class="min-w-full w-full table-auto whitespace-nowrap text-sm mx-auto">
+  <table class="min-w-full w-full table-auto whitespace-nowrap text-sm md:text-base mx-auto">
         <thead class="bg-primary text-white">
           <tr>
-            <th class="px-4 py-2">Matches Played</th>
-            <th class="px-4 py-2">Wins</th>
-            <th class="px-4 py-2">Draws</th>
-            <th class="px-4 py-2">Losses</th>
-            ${hasGroup ? '<th class="px-4 py-2">Group Ranking</th>' : ''}
-            <th class="px-4 py-2">Overall Ranking</th>
+    <th class="px-4 py-3">Matches Played</th>
+    <th class="px-4 py-3">Wins</th>
+    <th class="px-4 py-3">Losses</th>
+    ${hasGroup ? '<th class="px-4 py-3">Group Ranking</th>' : ''}
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td class="text-center">${stats.played}</td>
-            <td class="text-center">${stats.wins}</td>
-            <td class="text-center">${stats.draws}</td>
-            <td class="text-center">${stats.losses}</td>
-            ${hasGroup ? `<td class="text-center">${stats.groupPlacing ?? 'NA'}</td>` : ''}
-            <td class="text-center">${stats.placing}</td>
+    <td class="text-center px-4 py-3">${stats.played}</td>
+    <td class="text-center px-4 py-3">${stats.wins}</td>
+    <td class="text-center px-4 py-3">${stats.losses}</td>
+    ${hasGroup ? `<td class="text-center px-4 py-3">${stats.groupPlacing ?? 'NA'}</td>` : ''}
           </tr>
         </tbody>
       </table>
@@ -114,51 +110,51 @@ onAuthStateChanged(auth, async (user) => {
   async function computeStats(eventId){
     const q = query(collection(db,'matches'), where('event_id','==', eventId));
     const snap = await getDocs(q);
-    if(snap.empty) return { played:'NA', wins:'NA', draws:'NA', losses:'NA', placing:'NA', groupPlacing:'NA' };
+  if(snap.empty) return { played:'NA', wins:'NA', losses:'NA', groupPlacing:'NA' };
 
     const overall = new Map();
     const qualifierMatches = [];
-    const ensureOverall = (id) => { if(!overall.has(id)) overall.set(id,{ id, played:0,wins:0,draws:0,losses:0}); return overall.get(id); };
+    const allMatches = [];
+    const ensureOverall = (id) => { if(!overall.has(id)) overall.set(id,{ id, played:0,wins:0,losses:0}); return overall.get(id); };
 
     snap.docs.forEach(docSnap => {
       const m = docSnap.data();
+      allMatches.push(m);
       const aId = m.competitor_a?.id; const bId = m.competitor_b?.id;
-      if(!aId || !bId) return;
-      if(isPlaceholderId(aId, eventId, m.match_type) || isPlaceholderId(bId, eventId, m.match_type)) return;
+      if(!aId || !bId) return; // skip incomplete
+      if(isPlaceholderId(aId, eventId, m.match_type) || isPlaceholderId(bId, eventId, m.match_type)) return; // skip placeholders
       if(m.status === 'void') return;
-      if(m.status !== 'final') return; // only finished matches
+      if(m.status !== 'final') return; // only finished matches count
       if(m.match_type === 'qualifier') qualifierMatches.push(m);
       const a = ensureOverall(aId); const b = ensureOverall(bId);
       a.played++; b.played++;
       const aScore = m.score_a ?? 0; const bScore = m.score_b ?? 0;
       if(aScore > bScore){ a.wins++; b.losses++; }
       else if(bScore > aScore){ b.wins++; a.losses++; }
-      else { a.draws++; b.draws++; }
+      // ties ignored (no draws tracked or displayed)
     });
 
-    if(overall.size === 0) return { played:'NA', wins:'NA', draws:'NA', losses:'NA', placing:'NA', groupPlacing:'NA' };
+	if(overall.size === 0) return { played:'NA', wins:'NA', losses:'NA', groupPlacing:'NA' };
 
     const list = Array.from(overall.values()).sort((x,y)=>{
       if(y.wins !== x.wins) return y.wins - x.wins;
-      if(y.draws !== x.draws) return y.draws - x.draws;
       if(y.played !== x.played) return y.played - x.played;
       return x.id.localeCompare(y.id);
     });
-    let prev=null; list.forEach((item,idx)=>{
-      if(prev && prev.wins===item.wins && prev.draws===item.draws && prev.played===item.played){ item.place = prev.place; }
-      else { item.place = idx+1; }
-      prev=item;
-    });
+  // Unique overall places (no shared ranks)
+  list.forEach((item,idx)=>{ item.place = idx+1; });
 
     const userSuffixes = userTeamSuffixesByEvent[eventId] || new Set();
     const userIds = new Set([...userSuffixes, user.uid]);
     const userEntry = list.find(row => userIds.has(row.id));
-    if(!userEntry) return { played:'NA', wins:'NA', draws:'NA', losses:'NA', placing:'NA', groupPlacing:'NA' };
+  if(!userEntry) return { played:'NA', wins:'NA', losses:'NA', groupPlacing:'NA' };
 
-    // Group ranking (basketball & frisbee only) based on qualifier round-robin pool
+    // Group / advancement ranking
     let groupPlacing = 'NA';
-    if((eventId === 'basketball3v3' || eventId === 'frisbee5v5') && qualifierMatches.length){
-      // Determine user's pool from any qualifier they participated in
+    if(eventId === 'basketball3v3'){
+      groupPlacing = ordinal(userEntry.place);
+    } else if(['frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId) && qualifierMatches.length){
+      // find user's pool
       const userPool = qualifierMatches.reduce((pool, m) => {
         if(pool) return pool;
         const aId = m.competitor_a?.id; const bId = m.competitor_b?.id;
@@ -166,9 +162,8 @@ onAuthStateChanged(auth, async (user) => {
         return null;
       }, null);
       if(userPool){
-        // Aggregate pool-only stats from qualifier matches in that pool
         const poolStats = new Map();
-        const ensurePool = (id) => { if(!poolStats.has(id)) poolStats.set(id,{ id, played:0,wins:0,draws:0,losses:0}); return poolStats.get(id); };
+        const ensurePool = (id) => { if(!poolStats.has(id)) poolStats.set(id,{ id, played:0,wins:0,losses:0}); return poolStats.get(id); };
         qualifierMatches.filter(m => m.pool === userPool).forEach(m => {
           const aId = m.competitor_a?.id; const bId = m.competitor_b?.id;
           if(!aId || !bId) return;
@@ -178,27 +173,38 @@ onAuthStateChanged(auth, async (user) => {
           const aScore = m.score_a ?? 0; const bScore = m.score_b ?? 0;
           if(aScore > bScore){ a.wins++; b.losses++; }
           else if(bScore > aScore){ b.wins++; a.losses++; }
-          else { a.draws++; b.draws++; }
         });
         if(poolStats.size){
           const poolList = Array.from(poolStats.values()).sort((x,y)=>{
             if(y.wins !== x.wins) return y.wins - x.wins;
-            if(y.draws !== x.draws) return y.draws - x.draws;
             if(y.played !== x.played) return y.played - x.played;
             return x.id.localeCompare(y.id);
           });
-          let prevP=null; poolList.forEach((item,idx)=>{
-            if(prevP && prevP.wins===item.wins && prevP.draws===item.draws && prevP.played===item.played){ item.place = prevP.place; }
-            else { item.place = idx+1; }
-            prevP=item;
-          });
+          poolList.forEach((item,idx)=>{ item.place = idx+1; });
           const poolUser = poolList.find(r => userIds.has(r.id));
-            if(poolUser) groupPlacing = ordinal(poolUser.place);
+          if(poolUser){
+            let advLimit = 0;
+            if(eventId.startsWith('badminton')) advLimit = 2; // semis
+            else if(eventId==='frisbee5v5'){
+              // infer from elimination placeholders
+              const elim = allMatches.filter(m=> m.match_type !== 'qualifier');
+              const used = {};
+              elim.forEach(m=>{
+                [m.competitor_a?.id, m.competitor_b?.id].forEach(id=>{
+                  if(/^([ABC])(\d+)$/.test(id||'')){
+                    const pool=id[0]; const num=parseInt(id.slice(1),10); used[pool]=Math.max(used[pool]||0,num);
+                  }
+                });
+              });
+              advLimit = used[userPool] || 0;
+            }
+            groupPlacing = ordinal(poolUser.place);
+          }
         }
       }
     }
 
-    return { played:userEntry.played, wins:userEntry.wins, draws:userEntry.draws, losses:userEntry.losses, placing: ordinal(userEntry.place), groupPlacing };
+  return { played:userEntry.played, wins:userEntry.wins, losses:userEntry.losses, groupPlacing };
   }
 
   async function renderEvent(eventId){

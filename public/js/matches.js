@@ -13,6 +13,7 @@ import {
 
 const db = window.firebase.db;
 const container = document.getElementById("match-container");
+const rankingContainer = document.getElementById("ranking-container");
 
 /* ----------  team-name cache with event-scoped resolution ---------- */
 const cache = new Map();
@@ -118,6 +119,123 @@ function shell(rowsHtml) {
             </tbody>
         </table>
     </div>`;
+}
+
+/* ---------- ranking helpers (mirrors mystats) ---------- */
+function ordinal(n){
+    if(typeof n !== 'number') return n;
+    const v = n % 100; if(v>=11 && v<=13) return n + 'th';
+    switch(n % 10){case 1: return n+'st'; case 2: return n+'nd'; case 3: return n+'rd'; default: return n+'th';}
+}
+
+function rankingTable(eventId, data){
+    const hasGroup = ['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId);
+    // Remove draws + overall ranking per request
+    const cols = ["Team","Matches Played","Wins","Losses"]; if(hasGroup) cols.push("Group Rank");
+    const header = cols.map(c=>`<th class="px-3 py-2 text-center">${c}</th>`).join('');
+
+    // Determine unique pools present and assign colors
+    const pools = Array.from(new Set(data.filter(d=>d.pool).map(d=>d.pool))).sort();
+    const colorPalette = [
+        'bg-blue-50','bg-green-50','bg-purple-50','bg-amber-50','bg-pink-50','bg-teal-50','bg-orange-50','bg-lime-50'
+    ];
+    const poolColor = p => {
+        const idx = pools.indexOf(p);
+        return idx === -1 ? '' : colorPalette[idx % colorPalette.length];
+    };
+
+    // Sort by pool (if any) then by groupPlace (if available) else overall place
+    const sorted = data.slice().sort((a,b)=>{
+        if(hasGroup){
+            if(a.pool && b.pool && a.pool !== b.pool) return a.pool.localeCompare(b.pool);
+            if(a.pool && !b.pool) return -1; if(!a.pool && b.pool) return 1;
+            if(a.groupPlace && b.groupPlace && a.groupPlace !== b.groupPlace) return a.groupPlace - b.groupPlace;
+        }
+        return a.place - b.place;
+    });
+
+    const rows = sorted.map(r=>`<tr class="${r.pool?poolColor(r.pool):'even:bg-gray-50'}">
+        <td class="px-3 py-2 font-medium text-center">${r.name || r.id}${r.pool?` <span class="text-xs text-gray-500 align-middle">(${r.pool})</span>`:''}</td>
+        <td class="px-3 py-2 text-center">${r.played}</td>
+        <td class="px-3 py-2 text-center">${r.wins}</td>
+        <td class="px-3 py-2 text-center">${r.losses}</td>
+        ${hasGroup ? `<td class="px-3 py-2 text-center">${r.groupPlace ? ordinal(r.groupPlace) : '—'}</td>` : ''}
+    </tr>`).join('') || `<tr><td colspan="${cols.length}" class="p-4 text-center text-gray-500">No data yet.</td></tr>`;
+    const legend = pools.length ? `<div class="flex flex-wrap gap-2 text-xs mt-2">${pools.map((p,i)=>`<span class="px-2 py-1 rounded ${colorPalette[i % colorPalette.length]}">Group ${p}</span>`).join('')}</div>` : '';
+    return `<div class="overflow-x-auto"><table class="min-w-full table-auto text-sm md:text-base whitespace-nowrap">
+     <thead class="bg-primary text-white"><tr>${header}</tr></thead>
+     <tbody>${rows}</tbody></table>${legend}</div>`;
+}
+
+async function computeRankings(eventId){
+    return new Promise((resolve) => {
+        const q = query(collection(db,'matches'), where('event_id','==', eventId));
+        const off = onSnapshot(q, async snap => {
+            const matches = snap.docs.map(d=> ({id:d.id, ...d.data()}));
+            const stats = new Map();
+            const ensure = id => { if(!stats.has(id)) stats.set(id,{id,played:0,wins:0,losses:0}); return stats.get(id); };
+            const qualifier = [];
+            matches.forEach(m => {
+                const aId = m.competitor_a?.id, bId = m.competitor_b?.id;
+                if(!aId||!bId) return;
+                if(isPlaceholder(aId,m) || isPlaceholder(bId,m)) return;
+                if(m.status==='void' || m.status!=='final') return;
+                if(m.match_type==='qualifier') qualifier.push(m);
+                const a = ensure(aId), b = ensure(bId);
+                a.played++; b.played++;
+                const as = m.score_a??0, bs = m.score_b??0;
+                if(as>bs){ a.wins++; b.losses++; } else if(bs>as){ b.wins++; a.losses++; } // ties ignored (no draws column)
+                // capture pool info for qualifiers early
+                if(m.match_type==='qualifier' && m.pool){ if(!a.pool) a.pool = m.pool; if(!b.pool) b.pool = m.pool; }
+            });
+            let list = Array.from(stats.values()).sort((x,y)=>{
+                if(y.wins!==x.wins) return y.wins-x.wins;
+                if(y.played!==x.played) return y.played-x.played;
+                return x.id.localeCompare(y.id);
+            });
+            // Assign unique places (no shared ranks) based on sorted order
+            list.forEach((it,i)=>{ it.place = i+1; });
+            if(['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId)){
+                const pools = {}; qualifier.forEach(m=> { if(m.pool){ pools[m.pool]=pools[m.pool]||[]; pools[m.pool].push(m); } });
+                // Determine advancement limits per pool/event
+                const advLimitByPool = {};
+                if(eventId.startsWith('badminton')){
+                    // Top 2 from each pool advance to semis
+                    Object.keys(pools).forEach(p=> advLimitByPool[p]=2);
+                } else if(eventId==='frisbee5v5'){
+                    // Infer highest seed referenced in elim placeholders (A1.., B1.. etc)
+                    const elim = matches.filter(m=> m.match_type!=='qualifier');
+                    const used = {};
+                    elim.forEach(m=> {
+                        [m.competitor_a?.id, m.competitor_b?.id].forEach(id=>{
+                            if(/^([ABC])(\d+)$/.test(id||'')){
+                                const pool=id[0]; const num=parseInt(id.slice(1),10); used[pool]=Math.max(used[pool]||0,num);
+                            }
+                        });
+                    });
+                    Object.entries(pools).forEach(([p])=> advLimitByPool[p]= used[p] || 0);
+                }
+                Object.entries(pools).forEach(([pool,games])=>{
+                    const poolStats = new Map();
+                    const ensureP = id => { if(!poolStats.has(id)) poolStats.set(id,{id,played:0,wins:0,losses:0}); return poolStats.get(id); };
+                    games.forEach(m=>{ const aId=m.competitor_a?.id,bId=m.competitor_b?.id; if(!aId||!bId) return; if(isPlaceholder(aId,m)||isPlaceholder(bId,m)) return; const a=ensureP(aId), b=ensureP(bId); a.played++; b.played++; const as=m.score_a??0, bs=m.score_b??0; if(as>bs){a.wins++; b.losses++;} else if(bs>as){b.wins++; a.losses++;} });
+                    let arr = Array.from(poolStats.values()).sort((x,y)=>{ if(y.wins!==x.wins) return y.wins-x.wins; if(y.played!==x.played) return y.played-x.played; return x.id.localeCompare(y.id); });
+                    // Unique pool places
+                    arr.forEach((it,i)=>{ it.place = i+1; });
+                    // Always show actual pool placing (no dashes); advancement limit used elsewhere if needed
+                    arr.forEach(r=> { const overallRec = list.find(o=>o.id===r.id); if(overallRec){ overallRec.groupPlace = r.place; if(!overallRec.pool) overallRec.pool = pool; } });
+                });
+                if(eventId==='basketball3v3'){
+                    // Basketball: show overall unique seed as groupPlace (no dashes)
+                    list.forEach(r=>{ if(!r.groupPlace) r.groupPlace = r.place; });
+                }
+            }
+            // resolve team names for display
+            await Promise.all(list.map(async rec => { rec.name = await resolveTeamName(eventId, rec.id); }));
+            off(); // one-shot compute; could keep live by omitting this
+            resolve(list);
+        });
+    });
 }
 
 /* ----------  progressive reveal helpers ---------- */
@@ -325,6 +443,7 @@ function getMatchPriority(matchId) {
 
 function listen(eventId) {
     container.innerHTML = '<p class="p-4 text-gray-500">Loading…</p>';
+    if(rankingContainer) rankingContainer.innerHTML = '<p class="p-4 text-gray-500">Calculating rankings…</p>';
 
     const q = query(
         collection(db, "matches"),
@@ -403,6 +522,10 @@ function listen(eventId) {
         }
 
         container.innerHTML = shell(rows.join(""));
+        if(rankingContainer){
+            const rankings = await computeRankings(eventId);
+            rankingContainer.innerHTML = rankingTable(eventId, rankings);
+        }
     });
 }
 

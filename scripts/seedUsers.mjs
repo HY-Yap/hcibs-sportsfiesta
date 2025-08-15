@@ -19,7 +19,9 @@ import { getFirestore } from "firebase-admin/firestore";
 import fs from "node:fs/promises";
 import path from "node:path";
 import Papa from "papaparse";
-import key from "./serviceAccountKey.json" assert { type: "json" };
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const key = require('./serviceAccountKey.json');
 import readline from "readline";
 
 initializeApp({ credential: cert(key), projectId: key.project_id });
