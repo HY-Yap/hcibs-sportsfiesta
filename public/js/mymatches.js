@@ -62,8 +62,8 @@ function isPlaceholder(teamId, match){
   if(!teamId) return true;
   // Badminton finals/bronze placeholders
   if(/^(?:S|D)[FB]W\d+$/.test(teamId)) return true;
-  // Badminton early placeholders (optional seeds)
-  if(/^(?:S|D)[1-4]$/.test(teamId)) return true;
+  // Badminton early placeholders (optional seeds) - NOT for basketball
+  if(match?.event_id !== 'basketball3v3' && /^(?:S|D)[1-4]$/.test(teamId)) return true;
   // Basketball seed & progression placeholders
   if(/^BW[1-8]$/.test(teamId)) return true;
   if(/^B(?:QF[1-4]W|SF[12][WL])$/.test(teamId)) return true;
@@ -113,11 +113,12 @@ onAuthStateChanged(auth, async (user) => {
   // Preload all matches & team names once
   const matchesSnap = await getDocs(collection(db,'matches'));
   const allMatches = matchesSnap.docs.map(d=> ({ id:d.id, ...d.data() }));
-  const teamNameBySuffix = {};
+  const teamNameByEventAndSuffix = {}; // eventId -> suffix -> name
   teamsSnap.forEach(teamDoc => {
     const t = teamDoc.data();
     const suffix = teamDoc.id.includes('__') ? teamDoc.id.split('__').pop() : teamDoc.id;
-    teamNameBySuffix[suffix] = t.name || suffix;
+    if(!teamNameByEventAndSuffix[t.event_id]) teamNameByEventAndSuffix[t.event_id] = {};
+    teamNameByEventAndSuffix[t.event_id][suffix] = t.name || suffix;
   });
 
   function renderEvent(eventId){
@@ -141,8 +142,9 @@ onAuthStateChanged(auth, async (user) => {
     }
     eventMatches.sort((a,b)=> (a.scheduled_at && b.scheduled_at) ? a.scheduled_at.toMillis() - b.scheduled_at.toMillis() : 0);
     const rows = eventMatches.map(m => {
-      const compA = teamNameBySuffix[m.competitor_a?.id] || m.competitor_a?.name || m.competitor_a?.id || '-';
-      const compB = teamNameBySuffix[m.competitor_b?.id] || m.competitor_b?.name || m.competitor_b?.id || '-';
+      const eventTeamNames = teamNameByEventAndSuffix[eventId] || {};
+      const compA = eventTeamNames[m.competitor_a?.id] || m.competitor_a?.name || m.competitor_a?.id || '-';
+      const compB = eventTeamNames[m.competitor_b?.id] || m.competitor_b?.name || m.competitor_b?.id || '-';
       const scoreA = typeof m.score_a === 'number' ? m.score_a : null;
       const scoreB = typeof m.score_b === 'number' ? m.score_b : null;
       const isFinal = m.status === 'final';

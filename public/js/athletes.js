@@ -27,17 +27,36 @@ const eventNames = {
     frisbee5v5: "Frisbee 5v5",
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-    loadAllTeams();
+document.addEventListener("DOMContentLoaded", async () => {
+    console.log("DOM loaded, starting athletes.js");
+    
+    // Check if required elements exist
+    const loadingElement = document.getElementById("loading");
+    const containerElement = document.getElementById("athletes-container");
+    
+    if (!loadingElement || !containerElement) {
+        console.error("Required DOM elements not found:", {
+            loading: !!loadingElement,
+            container: !!containerElement
+        });
+        return;
+    }
+    
     setupTabHandlers();
+    await loadAllTeams();
 });
 
 async function loadAllTeams() {
     try {
         console.log("Loading all teams...");
+        
+        // Check if Firebase is initialized
+        if (!db) {
+            throw new Error("Firebase database not initialized");
+        }
 
         const teamsSnap = await getDocs(
-            query(collection(db, "teams"), orderBy("event_id"), orderBy("name"))
+            collection(db, "teams")
         );
 
         allTeams = teamsSnap.docs.map((doc) => ({
@@ -45,14 +64,34 @@ async function loadAllTeams() {
             ...doc.data(),
         }));
 
+        // Sort in JavaScript instead of Firestore to avoid index requirements
+        allTeams.sort((a, b) => {
+            if (a.event_id !== b.event_id) {
+                return a.event_id.localeCompare(b.event_id);
+            }
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
         console.log(`Loaded ${allTeams.length} teams`);
 
-        document.getElementById("loading").style.display = "none";
+        const loadingElement = document.getElementById("loading");
+        if (loadingElement) {
+            loadingElement.style.display = "none";
+        }
+        
         displayTeams(allTeams);
     } catch (error) {
         console.error("Error loading teams:", error);
-        document.getElementById("loading").innerHTML =
-            '<div class="text-red-500">Failed to load athletes</div>';
+        
+        const loadingElement = document.getElementById("loading");
+        if (loadingElement) {
+            loadingElement.innerHTML =
+                `<div class="text-red-500">
+                    <p class="font-semibold">Failed to load athletes</p>
+                    <p class="text-sm mt-2">Error: ${error.message}</p>
+                    <p class="text-xs mt-1 text-gray-600">Check console for details</p>
+                </div>`;
+        }
     }
 }
 

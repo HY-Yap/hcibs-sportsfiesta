@@ -184,7 +184,7 @@ async function loadRecentResults() {
 
         if (matchesSnap.empty) {
             container.innerHTML =
-                '<div class="text-gray-500 text-center py-4">No completed matches yet</div>';
+                '<div class="text-gray-500 text-center py-8 flex items-center justify-center">No completed matches yet</div>';
             return;
         }
 
@@ -206,7 +206,7 @@ async function loadRecentResults() {
 
         if (realMatches.length === 0) {
             container.innerHTML =
-                '<div class="text-gray-500 text-center py-4">No completed matches yet</div>';
+                '<div class="text-gray-500 text-center py-8 flex items-center justify-center">No completed matches yet</div>';
             return;
         }
 
