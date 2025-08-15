@@ -9,6 +9,7 @@ import {
     onSnapshot,
     doc,
     getDoc,
+    getDocs,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const db = window.firebase.db;
@@ -131,7 +132,7 @@ function ordinal(n){
 function rankingTable(eventId, data){
     const hasGroup = ['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId);
     // Remove draws + overall ranking per request
-    const cols = ["Team","Matches Played","Wins","Losses"]; if(hasGroup) cols.push("Group Rank");
+    const cols = ["Team","Matches Played","Wins","Losses","Points For","Points Against","Points Diff"]; if(hasGroup) cols.push("Group Rank");
     const header = cols.map(c=>`<th class="px-3 py-2 text-center">${c}</th>`).join('');
 
     // Determine unique pools present and assign colors
@@ -159,6 +160,9 @@ function rankingTable(eventId, data){
         <td class="px-3 py-2 text-center">${r.played}</td>
         <td class="px-3 py-2 text-center">${r.wins}</td>
         <td class="px-3 py-2 text-center">${r.losses}</td>
+        <td class="px-3 py-2 text-center">${r.pointsFor || 0}</td>
+        <td class="px-3 py-2 text-center">${r.pointsAgainst || 0}</td>
+        <td class="px-3 py-2 text-center">${r.pointsDiff || 0}</td>
         ${hasGroup ? `<td class="px-3 py-2 text-center">${r.groupPlace ? ordinal(r.groupPlace) : '—'}</td>` : ''}
     </tr>`).join('') || `<tr><td colspan="${cols.length}" class="p-4 text-center text-gray-500">No data yet.</td></tr>`;
     const legend = pools.length ? `<div class="flex flex-wrap gap-2 text-xs mt-2">${pools.map((p,i)=>`<span class="px-2 py-1 rounded ${colorPalette[i % colorPalette.length]}">Group ${p}</span>`).join('')}</div>` : '';
@@ -167,75 +171,117 @@ function rankingTable(eventId, data){
      <tbody>${rows}</tbody></table>${legend}</div>`;
 }
 
-async function computeRankings(eventId){
-    return new Promise((resolve) => {
-        const q = query(collection(db,'matches'), where('event_id','==', eventId));
-        const off = onSnapshot(q, async snap => {
-            const matches = snap.docs.map(d=> ({id:d.id, ...d.data()}));
-            const stats = new Map();
-            const ensure = id => { if(!stats.has(id)) stats.set(id,{id,played:0,wins:0,losses:0}); return stats.get(id); };
-            const qualifier = [];
-            matches.forEach(m => {
-                const aId = m.competitor_a?.id, bId = m.competitor_b?.id;
-                if(!aId||!bId) return;
-                if(isPlaceholder(aId,m) || isPlaceholder(bId,m)) return;
-                if(m.status==='void' || m.status!=='final') return;
-                if(m.match_type==='qualifier') qualifier.push(m);
-                const a = ensure(aId), b = ensure(bId);
-                a.played++; b.played++;
-                const as = m.score_a??0, bs = m.score_b??0;
-                if(as>bs){ a.wins++; b.losses++; } else if(bs>as){ b.wins++; a.losses++; } // ties ignored (no draws column)
-                // capture pool info for qualifiers early
-                if(m.match_type==='qualifier' && m.pool){ if(!a.pool) a.pool = m.pool; if(!b.pool) b.pool = m.pool; }
-            });
-            let list = Array.from(stats.values()).sort((x,y)=>{
-                if(y.wins!==x.wins) return y.wins-x.wins;
-                if(y.played!==x.played) return y.played-x.played;
-                return x.id.localeCompare(y.id);
-            });
-            // Assign unique places (no shared ranks) based on sorted order
-            list.forEach((it,i)=>{ it.place = i+1; });
-            if(['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId)){
-                const pools = {}; qualifier.forEach(m=> { if(m.pool){ pools[m.pool]=pools[m.pool]||[]; pools[m.pool].push(m); } });
-                // Determine advancement limits per pool/event
-                const advLimitByPool = {};
-                if(eventId.startsWith('badminton')){
-                    // Top 2 from each pool advance to semis
-                    Object.keys(pools).forEach(p=> advLimitByPool[p]=2);
-                } else if(eventId==='frisbee5v5'){
-                    // Infer highest seed referenced in elim placeholders (A1.., B1.. etc)
-                    const elim = matches.filter(m=> m.match_type!=='qualifier');
-                    const used = {};
-                    elim.forEach(m=> {
-                        [m.competitor_a?.id, m.competitor_b?.id].forEach(id=>{
-                            if(/^([ABC])(\d+)$/.test(id||'')){
-                                const pool=id[0]; const num=parseInt(id.slice(1),10); used[pool]=Math.max(used[pool]||0,num);
-                            }
-                        });
-                    });
-                    Object.entries(pools).forEach(([p])=> advLimitByPool[p]= used[p] || 0);
-                }
-                Object.entries(pools).forEach(([pool,games])=>{
-                    const poolStats = new Map();
-                    const ensureP = id => { if(!poolStats.has(id)) poolStats.set(id,{id,played:0,wins:0,losses:0}); return poolStats.get(id); };
-                    games.forEach(m=>{ const aId=m.competitor_a?.id,bId=m.competitor_b?.id; if(!aId||!bId) return; if(isPlaceholder(aId,m)||isPlaceholder(bId,m)) return; const a=ensureP(aId), b=ensureP(bId); a.played++; b.played++; const as=m.score_a??0, bs=m.score_b??0; if(as>bs){a.wins++; b.losses++;} else if(bs>as){b.wins++; a.losses++;} });
-                    let arr = Array.from(poolStats.values()).sort((x,y)=>{ if(y.wins!==x.wins) return y.wins-x.wins; if(y.played!==x.played) return y.played-x.played; return x.id.localeCompare(y.id); });
-                    // Unique pool places
-                    arr.forEach((it,i)=>{ it.place = i+1; });
-                    // Always show actual pool placing (no dashes); advancement limit used elsewhere if needed
-                    arr.forEach(r=> { const overallRec = list.find(o=>o.id===r.id); if(overallRec){ overallRec.groupPlace = r.place; if(!overallRec.pool) overallRec.pool = pool; } });
-                });
-                if(eventId==='basketball3v3'){
-                    // Basketball: show overall unique seed as groupPlace (no dashes)
-                    list.forEach(r=>{ if(!r.groupPlace) r.groupPlace = r.place; });
-                }
-            }
-            // resolve team names for display
-            await Promise.all(list.map(async rec => { rec.name = await resolveTeamName(eventId, rec.id); }));
-            off(); // one-shot compute; could keep live by omitting this
-            resolve(list);
-        });
+// Compute rankings including zero‑match teams & all pools.
+// Optionally pass matches array (from listener) to avoid duplicate fetch.
+async function computeRankings(eventId, existingMatches){
+    const stats = new Map();
+    const ensure = id => { if(!stats.has(id)) stats.set(id,{ id, played:0, wins:0, losses:0, pointsFor:0, pointsAgainst:0, pointsDiff:0 }); return stats.get(id); };
+
+    // Use passed matches or fetch
+    let matches = existingMatches;
+    if(!matches){
+        const matchSnap = await getDocs(query(collection(db,'matches'), where('event_id','==', eventId)));
+        matches = matchSnap.docs.map(d=> ({id:d.id, ...d.data()}));
+    }
+
+    // Derive pools & initial team entries from ALL qualifier matches (including scheduled ones).
+    // This ensures we see all groups even before matches are played.
+    matches.filter(m=> m.match_type==='qualifier' && m.pool).forEach(m => {
+        const aId = m.competitor_a?.id, bId = m.competitor_b?.id;
+        if(!aId||!bId) return;
+        // Include ALL teams from qualifiers, even if they're currently placeholders
+        const a = ensure(aId), b = ensure(bId);
+        if(!a.pool) a.pool = m.pool; if(!b.pool) b.pool = m.pool;
     });
+
+    // Normalize basketball pool ids (allow 1-4, A-D, 'Group A', etc.)
+    if(eventId === 'basketball3v3'){
+        const digitToLetter = { '1':'A','2':'B','3':'C','4':'D' };
+        stats.forEach(rec => { if(rec.pool){ let p = String(rec.pool).toUpperCase(); if(digitToLetter[p]) p=digitToLetter[p]; const m=p.match(/([A-D])$/); if(m) rec.pool=m[1]; } });
+    }
+
+    // Helper: a team is countable only if not a placeholder
+    const isCountable = (id, match) => !!id && !isPlaceholder(id, match);
+
+    // Tally only final, non-void matches for win/loss stats
+    // Count matches if the current team IDs are real (not placeholders)
+    matches.filter(m=> m.status==='final' && m.status!=='void').forEach(m => {
+        const aId = m.competitor_a?.id, bId = m.competitor_b?.id;
+        if(!aId||!bId) return; 
+        
+        // Count stats for real team IDs even if match originally had placeholders
+        const aIsReal = !isPlaceholder(aId, {event_id: eventId});
+        const bIsReal = !isPlaceholder(bId, {event_id: eventId});
+        
+        if(aIsReal || bIsReal) { // At least one real team
+            const as = m.score_a??0, bs = m.score_b??0;
+            
+            if(aIsReal) {
+                const a = ensure(aId);
+                a.played++;
+                a.pointsFor += as;
+                a.pointsAgainst += bs;
+                a.pointsDiff = a.pointsFor - a.pointsAgainst;
+                if(as>bs) a.wins++; else if(bs>as) a.losses++;
+            }
+            if(bIsReal) {
+                const b = ensure(bId);
+                b.played++;
+                b.pointsFor += bs;
+                b.pointsAgainst += as;
+                b.pointsDiff = b.pointsFor - b.pointsAgainst;
+                if(bs>as) b.wins++; else if(as>bs) b.losses++;
+            }
+        }
+    });
+    
+    // Filter out placeholder teams from final rankings display
+    let list = Array.from(stats.values())
+        .filter(rec => !isPlaceholder(rec.id, {event_id: eventId})) // Remove placeholders from display
+        .sort((x,y)=>{
+        if(y.wins!==x.wins) return y.wins-x.wins; // More wins = better
+        if(y.pointsDiff!==x.pointsDiff) return y.pointsDiff-x.pointsDiff; // Higher points difference = better
+        if(y.played!==x.played) return y.played-x.played;
+        return x.id.localeCompare(y.id);
+    });
+    list.forEach((it,i)=>{ it.place = i+1; });
+
+    // Pool-specific ordering: compute groupPlace only if any finals in that pool; otherwise leave blank
+    const pools = [...new Set(list.map(r=> r.pool).filter(Boolean))];
+    pools.forEach(pool => {
+    const poolFinals = matches.filter(m=> m.match_type==='qualifier' && m.pool===pool && m.status==='final');
+        if(poolFinals.length===0) return; // no results yet
+        // Build mini table for that pool with points tracking
+        const poolStats = new Map();
+        const ensureP = id => { if(!poolStats.has(id)) poolStats.set(id,{id,played:0,wins:0,losses:0,pointsFor:0,pointsAgainst:0,pointsDiff:0}); return poolStats.get(id); };
+    poolFinals.forEach(m=> { 
+        const aId=m.competitor_a?.id, bId=m.competitor_b?.id; 
+        if(!aId||!bId) return; 
+        const aIsReal = !isPlaceholder(aId, {event_id: eventId});
+        const bIsReal = !isPlaceholder(bId, {event_id: eventId});
+        if(!(aIsReal && bIsReal)) return; // Only count if both are real for pool stats
+        
+        const a=ensureP(aId), b=ensureP(bId); 
+        const as=m.score_a??0, bs=m.score_b??0;
+        a.played++; b.played++;
+        a.pointsFor += as; a.pointsAgainst += bs; a.pointsDiff = a.pointsFor - a.pointsAgainst;
+        b.pointsFor += bs; b.pointsAgainst += as; b.pointsDiff = b.pointsFor - b.pointsAgainst;
+        if(as>bs){a.wins++; b.losses++;} else if(bs>as){b.wins++; a.losses++;} 
+    });
+        const ordered = Array.from(poolStats.values()).sort((x,y)=>{ 
+            if(y.wins!==x.wins) return y.wins-x.wins; 
+            if(y.pointsDiff!==x.pointsDiff) return y.pointsDiff-x.pointsDiff; 
+            if(y.played!==x.played) return y.played-x.played; 
+            return x.id.localeCompare(y.id); 
+        });
+        ordered.forEach((rec,i)=> { const overall = list.find(r=> r.id===rec.id); if(overall) overall.groupPlace = i+1; });
+    });
+
+    // Removed basketball override so its groups mirror other sports: groupPlace appears only after results.
+
+    // Resolve names
+    await Promise.all(list.map(async rec => { rec.name = await resolveTeamName(eventId, rec.id); }));
+    return list;
 }
 
 /* ----------  progressive reveal helpers ---------- */
@@ -250,7 +296,8 @@ function isPlaceholder(teamId, match) {
     if (/^B(?:QF[1-4]W|SF[12][WL])$/.test(teamId)) return true;
 
     // (Optional) badminton semi placeholders (S1..S4 / D1..D4)
-    if (/^(?:S|D)[1-4]$/.test(teamId)) return true;
+    // Only treat as placeholders for badminton, NOT basketball
+    if (match?.event_id !== "basketball3v3" && /^(?:S|D)[1-4]$/.test(teamId)) return true;
 
     // Frisbee placeholders used in elims
     if (/^F(?:R[12]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true;
@@ -523,7 +570,7 @@ function listen(eventId) {
 
         container.innerHTML = shell(rows.join(""));
         if(rankingContainer){
-            const rankings = await computeRankings(eventId);
+            const rankings = await computeRankings(eventId, allMatches);
             rankingContainer.innerHTML = rankingTable(eventId, rankings);
         }
     });
