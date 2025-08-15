@@ -20,31 +20,42 @@ function isPlaceholder(teamId) {
     const specialRealTeams = ["IBP"];
     if (specialRealTeams.includes(teamId)) return false;
 
-    // Real team name patterns
-    if (/^BD-Team-\d+$/.test(teamId)) return false;
-    if (/^BS-Team-\d+$/.test(teamId)) return false;
-    if (/^BB-Team-\d+$/.test(teamId)) return false;
-    if (/^FS-Team-\d+$/.test(teamId)) return false;
-    if (/^[A-Z]{2,}$/.test(teamId)) return false;
+    // Real team name patterns (your imported teams)
+    if (/^BD-Team-\d+$/.test(teamId)) return false; // Badminton Doubles
+    if (/^BS-Team-\d+$/.test(teamId)) return false; // Badminton Singles
+    if (/^BB-Team-\d+$/.test(teamId)) return false; // Basketball
+    if (/^FS-Team-\d+$/.test(teamId)) return false; // Frisbee
 
-    // Bracket placeholders that resolve to real teams
-    if (/^[SD][A-Z]\d+$/.test(teamId)) return false; // SB3, SD4, DA1, etc.
-    if (/^B[A-Z]\d+$/.test(teamId)) return false; // Basketball brackets
+    // 🔥 Add more flexible patterns for your actual team names
+    if (/^[A-Z]{2,3}-Team-\d+$/.test(teamId)) return false; // Any XX-Team-## format
 
-    // 🔥 OPTION: Allow pool placeholders to show (remove this line if you want them hidden)
-    // if (/^[A-D][1-4]$/.test(teamId)) return false; // A1, B2, C3, D4 - treat as real
+    // Real team abbreviations (usually 2-4 letters)
+    if (/^[A-Z]{2,4}$/.test(teamId)) return false; // IBP, ACDC, etc.
 
-    // TRUE placeholders (always filter out)
-    if (/^(?:S|D)[FB]W\d+$/.test(teamId)) return true; // SFW1, DBW2, etc.
-    if (/^(?:S|D)[1-4]$/.test(teamId)) return true; // S1, S2, D3, D4
+    // 🔥 CONTEXT-AWARE: Pool teams (A1, B2, etc.) - depends on context!
+    // These are REAL teams in qualifiers, but PLACEHOLDERS in eliminations
+    // For homepage, treat them as REAL since we want to show qualifier matches
+    if (/^[A-D][1-4]$/.test(teamId)) return false; // Treat as real teams
+
+    // ===== TRUE PLACEHOLDERS (elimination bracket positions) =====
+
+    // Badminton elimination placeholders
+    if (/^(?:S|D)[FB]W\d+$/.test(teamId)) return true; // SFW1, DBW2, SBW1, etc.
+    if (/^(?:S|D)[1-4]$/.test(teamId)) return true; // S1, S2, D3, D4 (semi slots)
+
+    // Basketball elimination placeholders
     if (/^BW[1-8]$/.test(teamId)) return true; // BW1, BW2, etc.
-    if (/^B(?:QF[1-4]W|SF[12][WL])$/.test(teamId)) return true; // BQFW1, BSF1W, etc.
+    if (/^B(?:QF[1-4]W|SF[12][WL])$/.test(teamId)) return true; // BQF1W, BSF1L, etc.
     if (/^BSF[1-4][LW]$/.test(teamId)) return true; // BSF1L, BSF2W, etc.
-    if (/^F(?:R[12]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true; // FR1W, FSF1W, etc.
 
-    // Pool stage placeholders (keep this line to filter them out)
-    if (/^[A-D][1-4]$/.test(teamId)) return true; // A1, B2, C3, D4, etc.
+    // Frisbee elimination placeholders
+    if (/^F(?:R[12]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true; // FR1W, FSF1L, FCHAMP
 
+    // Bracket position placeholders (winners/losers of specific matches)
+    if (/^[SD][A-Z]\d+$/.test(teamId)) return true; // SB3, SD4, DA1, etc. (if these are placeholders)
+    if (/^B[A-Z]\d+$/.test(teamId)) return true; // Basketball brackets (if these are placeholders)
+
+    // Default: treat as real team if no pattern matches
     return false;
 }
 
@@ -180,7 +191,7 @@ async function loadRecentResults() {
         // Filter to only real teams and sort by scheduled time (most recent first)
         const realMatches = matchesSnap.docs
             .map((doc) => ({ id: doc.id, ...doc.data() }))
-            .filter((match) => hasRealTeams(match))
+            // .filter((match) => hasRealTeams(match))
             .sort((a, b) => {
                 if (a.scheduled_at && b.scheduled_at) {
                     return (
