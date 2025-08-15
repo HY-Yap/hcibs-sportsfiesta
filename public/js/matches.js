@@ -140,9 +140,17 @@ function rankingTable(eventId, data){
     const colorPalette = [
         'bg-blue-50','bg-green-50','bg-purple-50','bg-amber-50','bg-pink-50','bg-teal-50','bg-orange-50','bg-lime-50'
     ];
+    const tagColorPalette = [
+        'bg-blue-200 text-blue-800','bg-green-200 text-green-800','bg-purple-200 text-purple-800','bg-amber-200 text-amber-800',
+        'bg-pink-200 text-pink-800','bg-teal-200 text-teal-800','bg-orange-200 text-orange-800','bg-lime-200 text-lime-800'
+    ];
     const poolColor = p => {
         const idx = pools.indexOf(p);
         return idx === -1 ? '' : colorPalette[idx % colorPalette.length];
+    };
+    const poolTagColor = p => {
+        const idx = pools.indexOf(p);
+        return idx === -1 ? 'bg-gray-200 text-gray-800' : tagColorPalette[idx % tagColorPalette.length];
     };
 
     // Sort by pool (if any) then by groupPlace (if available) else overall place
@@ -156,7 +164,12 @@ function rankingTable(eventId, data){
     });
 
     const rows = sorted.map(r=>`<tr class="${r.pool?poolColor(r.pool):'even:bg-gray-50'}">
-        <td class="px-3 py-2 font-medium text-center">${r.name || r.id}${r.pool?` <span class="text-xs text-gray-500 align-middle">(${r.pool})</span>`:''}</td>
+        <td class="px-3 py-2 font-medium text-center">
+            <div class="grid grid-cols-12 items-center justify-center">
+                <span class="col-span-10 text-center">${r.name || r.id}</span>
+                <span class="col-span-2 text-center">${r.pool ? `<span class="text-xs ${poolTagColor(r.pool)} px-1 py-0.5 rounded font-semibold">(${r.pool})</span>` : ''}</span>
+            </div>
+        </td>
         <td class="px-3 py-2 text-center">${r.played}</td>
         <td class="px-3 py-2 text-center">${r.wins}</td>
         <td class="px-3 py-2 text-center">${r.losses}</td>
@@ -237,7 +250,7 @@ async function computeRankings(eventId, existingMatches){
     
     // Filter out placeholder teams from final rankings display
     let list = Array.from(stats.values())
-        .filter(rec => !isPlaceholder(rec.id, {event_id: eventId})) // Remove placeholders from display
+        .filter(rec => !isPlaceholder(rec.id, {event_id: eventId, match_type: 'qualifier'})) // Remove placeholders from display
         .sort((x,y)=>{
         if(y.wins!==x.wins) return y.wins-x.wins; // More wins = better
         if(y.pointsDiff!==x.pointsDiff) return y.pointsDiff-x.pointsDiff; // Higher points difference = better
