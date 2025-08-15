@@ -12,22 +12,36 @@
                 theme: {
                     extend: {
                         colors: {
-                            primary: { light: "#3b82f6", DEFAULT: "#2563eb", dark: "#1e40af" },
-                            accent: { light: "#fde047", DEFAULT: "#facc15", dark: "#ca8a04" },
-                            danger: { light: "#ef4444", DEFAULT: "#dc2626", dark: "#b91c1c" }
+                            primary: {
+                                light: "#3b82f6",
+                                DEFAULT: "#2563eb",
+                                dark: "#1e40af",
+                            },
+                            accent: {
+                                light: "#fde047",
+                                DEFAULT: "#facc15",
+                                dark: "#ca8a04",
+                            },
+                            danger: {
+                                light: "#ef4444",
+                                DEFAULT: "#dc2626",
+                                dark: "#b91c1c",
+                            },
                         },
                     },
                 },
             };
         </script>
-        <link rel="icon" href="data:,">
+        <link rel="icon" href="data:," />
     </head>
 
     <body class="bg-gray-100 min-h-screen">
         <div id="nav-placeholder"></div>
 
         <main class="max-w-screen-xl mx-auto p-4">
-            <h1 class="text-3xl font-semibold mb-6">Matches &amp; Results (LIVE)</h1>
+            <h1 class="text-3xl font-semibold mb-6">
+                Matches &amp; Results (LIVE)
+            </h1>
 
             <!-- sport tabs -->
             <div
@@ -50,7 +64,7 @@
                     </button>
                 </div>
 
-                <div class = "flex gap-4 flex-1 sm:flex-none">
+                <div class="flex gap-4 flex-1 sm:flex-none">
                     <button
                         data-sport="frisbee5v5"
                         class="sport-tab tab-btn flex-1 sm:flex-none px-4 py-2 font-medium border-b-2 border-transparent hover:text-primary hover:border-primary transition"

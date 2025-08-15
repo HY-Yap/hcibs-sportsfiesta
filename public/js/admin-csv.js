@@ -45,6 +45,19 @@ const els = {
     btnResetMatches: document.getElementById("btnResetMatches"),
 };
 
+// Matches CSV DOM refs
+els.matchesInput = document.getElementById("csvMatches");
+els.matchesStatus = document.getElementById("matchesStatus");
+els.btnValidateMatches = document.getElementById("btnValidateMatches");
+els.btnImportMatches = document.getElementById("btnImportMatches");
+els.chkReplaceMatches = document.getElementById("chkReplaceMatches");
+
+els.matchesCsvStatus = document.getElementById("matchesCsvStatus");
+els.matchesStatusMessages = document.getElementById("matchesStatusMessages");
+els.progressMatchesWrap = document.getElementById("progressMatchesContainer");
+els.progressMatchesBar = document.getElementById("progressMatchesBar");
+els.progressMatchesText = document.getElementById("progressMatchesText");
+
 async function refreshFirestoreCounts() {
     try {
         console.log("🔍 Refreshing Firestore counts...");
@@ -93,6 +106,33 @@ function msg(html) {
     els.statusMessages.innerHTML = html;
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Matches progress + messaging
+function setMatchesProgress(pct) {
+    els.progressMatchesWrap?.classList.remove("hidden");
+    if (els.progressMatchesBar) els.progressMatchesBar.style.width = `${pct}%`;
+    if (els.progressMatchesText)
+        els.progressMatchesText.textContent = `${pct}%`;
+}
+function matchesMsg(html) {
+    els.matchesCsvStatus?.classList.remove("hidden");
+    if (els.matchesStatusMessages) els.matchesStatusMessages.innerHTML = html;
+}
+
+// Matches state
+let matchesRows = [];
+window.__matches_state = null;
+
+// Allowed match types
+const ALLOWED_TYPES = new Set([
+    "qualifier",
+    "redemption",
+    "qf",
+    "semi",
+    "final",
+    "bronze",
+    "bonus",
+]);
 
 /* Batch chunking (safe for 500 op limit) */
 async function commitInChunks(ops, chunkSize = 400) {
@@ -158,6 +198,17 @@ async function commitInChunks(ops, chunkSize = 400) {
             '<i class="fas fa-circle text-gray-400 mr-1"></i> Unknown';
     }
 })();
+
+/* Reset awards: delete awards/{eventId} for selected events */
+async function resetAwardsForEvents(events) {
+    if (!events.length) return 0;
+    const ops = [];
+    for (const ev of events) {
+        ops.push((batch) => batch.delete(doc(db, "awards", ev)));
+    }
+    await commitInChunks(ops);
+    return ops.length; // number of delete ops queued
+}
 
 /* ----------------------------- CSV parse helpers ----------------------------- */
 function parseCsvFile(file) {
@@ -383,6 +434,110 @@ function validateTeams(rows, playersByEmail, capacityMap, rulesByEvent) {
     return { errors, warnings, teams };
 }
 
+function validateMatches(rows, rulesByEvent) {
+    const errors = [];
+    const warnings = [];
+    const seenId = new Set();
+    const placeholdersByEvent = {};
+    const affectedEvents = new Set();
+    const matches = [];
+
+    rows.forEach((r, i) => {
+        const row = i + 2;
+
+        const id = norm.str(r.id);
+        const event_id = norm.str(r.event_id);
+        const match_type = norm.str(r.match_type).toLowerCase();
+        const venue = norm.str(r.venue);
+        const scheduled_at_raw = norm.str(r.scheduled_at);
+        const pool = norm.str(r.pool);
+        const a = norm.str(r.competitor_a);
+        const b = norm.str(r.competitor_b);
+
+        if (!id) errors.push(`Matches.csv row ${row}: missing id`);
+        if (id && seenId.has(id))
+            errors.push(`Matches.csv row ${row}: duplicate id "${id}"`);
+        seenId.add(id);
+
+        if (!event_id) errors.push(`Matches.csv row ${row}: missing event_id`);
+        if (event_id && !rulesByEvent[event_id]) {
+            errors.push(
+                `Matches.csv row ${row}: unknown event_id "${event_id}" (no events/${event_id} doc)`
+            );
+        }
+        if (!match_type)
+            errors.push(`Matches.csv row ${row}: missing match_type`);
+        if (match_type && !ALLOWED_TYPES.has(match_type)) {
+            errors.push(
+                `Matches.csv row ${row}: invalid match_type "${match_type}"`
+            );
+        }
+        if (!venue)
+            warnings.push(
+                `Matches.csv row ${row}: empty venue (allowed, but recommended)`
+            );
+
+        if (!scheduled_at_raw) {
+            errors.push(`Matches.csv row ${row}: missing scheduled_at`);
+        }
+        const when = new Date(scheduled_at_raw);
+        if (scheduled_at_raw && isNaN(when.getTime())) {
+            errors.push(
+                `Matches.csv row ${row}: invalid scheduled_at "${scheduled_at_raw}" (use ISO like 2025-08-23T09:05:00Z)`
+            );
+        }
+
+        if (match_type === "qualifier" && !pool) {
+            errors.push(
+                `Matches.csv row ${row}: qualifiers require pool (A/B/…)`
+            );
+        }
+
+        if (event_id) {
+            affectedEvents.add(event_id);
+            placeholdersByEvent[event_id] ??= new Set();
+            if (a) placeholdersByEvent[event_id].add(a);
+            if (b) placeholdersByEvent[event_id].add(b);
+        }
+
+        matches.push({
+            id,
+            event_id,
+            match_type,
+            venue,
+            scheduled_at: when,
+            ...(pool ? { pool } : {}),
+            competitor_a: a ? { id: a } : null,
+            competitor_b: b ? { id: b } : null,
+        });
+    });
+
+    return {
+        errors,
+        warnings,
+        matches,
+        placeholdersByEvent,
+        affectedEvents: Array.from(affectedEvents),
+    };
+}
+
+async function ensurePlaceholderTeams(placeholdersByEvent) {
+    const ops = [];
+    for (const [event_id, set] of Object.entries(placeholdersByEvent)) {
+        for (const slot of set) {
+            const docId = `${event_id}__${slot}`;
+            ops.push((batch) =>
+                batch.set(
+                    doc(db, "teams", docId),
+                    { event_id, name: slot },
+                    { merge: true }
+                )
+            );
+        }
+    }
+    if (ops.length) await commitInChunks(ops);
+}
+
 /* ----------------------------- proposal helpers ----------------------------- */
 async function loadPlaceholdersByEvent() {
     const qSnap = await getDocs(
@@ -590,6 +745,35 @@ async function handleTeamsFile(file) {
     }
 }
 
+async function handleMatchesFile(file) {
+    try {
+        const rows = await parseCsvFile(file);
+        matchesRows = rows;
+        els.matchesStatus.innerHTML = `
+      <div class="text-green-700">
+        <i class="fas fa-check-circle mr-2"></i>${file.name} — ${
+            rows.length
+        } rows
+      </div>
+      <div class="mt-2">${previewList(rows)}</div>`;
+    } catch (e) {
+        matchesRows = [];
+        els.matchesStatus.innerHTML = `
+      <div class="text-red-700">
+        <i class="fas fa-exclamation-triangle mr-2"></i>Failed to parse ${file.name}
+      </div>`;
+    } finally {
+        if (els.btnValidateMatches)
+            els.btnValidateMatches.disabled = matchesRows.length === 0;
+        if (els.btnImportMatches) els.btnImportMatches.disabled = true;
+    }
+}
+
+els.matchesInput?.addEventListener("change", (e) => {
+    const f = e.target.files?.[0];
+    if (f) handleMatchesFile(f);
+});
+
 els.playersInput.addEventListener("change", (e) => {
     const f = e.target.files?.[0];
     if (f) handlePlayersFile(f);
@@ -744,6 +928,148 @@ els.btnValidate.addEventListener("click", async () => {
             els.progressText.textContent = "Complete!";
             els.progressBar.classList.add("bg-green-500");
         }, 400);
+    }
+});
+
+// Validate Matches CSV
+els.btnValidateMatches?.addEventListener("click", async () => {
+    try {
+        els.loading.classList.remove("hidden");
+        setMatchesProgress(5);
+
+        const eventRules = await loadEventRules();
+        setMatchesProgress(25);
+
+        const res = validateMatches(matchesRows, eventRules);
+        setMatchesProgress(60);
+
+        const errorHtml = res.errors.length
+            ? `<div class="bg-red-50 border border-red-200 rounded p-3 mb-2">
+           <div class="font-semibold text-red-800 mb-1"><i class="fas fa-times-circle mr-2"></i>${
+               res.errors.length
+           } error(s)</div>
+           <ul class="list-disc ml-5 text-red-700 text-sm">${res.errors
+               .map((e) => `<li>${e}</li>`)
+               .join("")}</ul>
+         </div>`
+            : "";
+
+        const warnHtml = res.warnings.length
+            ? `<div class="bg-yellow-50 border border-yellow-200 rounded p-3 mb-2">
+           <div class="font-semibold text-yellow-800 mb-1"><i class="fas fa-exclamation-triangle mr-2"></i>${
+               res.warnings.length
+           } warning(s)</div>
+           <ul class="list-disc ml-5 text-yellow-700 text-sm">${res.warnings
+               .map((w) => `<li>${w}</li>`)
+               .join("")}</ul>
+         </div>`
+            : "";
+
+        const perEvent = res.matches.reduce((acc, m) => {
+            acc[m.event_id] = (acc[m.event_id] || 0) + 1;
+            return acc;
+        }, {});
+        const perEventHtml = Object.entries(perEvent)
+            .map(([ev, n]) => `<li><code>${ev}</code>: ${n} matches</li>`)
+            .join("");
+
+        matchesMsg(`
+      ${errorHtml}${warnHtml}
+      <div class="bg-gray-50 border border-gray-200 rounded p-3">
+        <div class="font-semibold text-gray-800 mb-2"><i class="fas fa-list-ul mr-2"></i>Summary</div>
+        <ul class="list-disc ml-5 text-gray-700 text-sm">
+          <li>Rows parsed: <strong>${res.matches.length}</strong></li>
+          <li class="mt-2">Affected events:</li>
+          <ul class="list-disc ml-6">${perEventHtml || "<li>–</li>"}</ul>
+        </ul>
+      </div>
+    `);
+
+        if (res.errors.length === 0) {
+            window.__matches_state = res;
+            els.btnImportMatches.disabled = false;
+        } else {
+            window.__matches_state = null;
+            els.btnImportMatches.disabled = true;
+        }
+
+        setMatchesProgress(100);
+    } catch (err) {
+        matchesMsg(
+            `<div class="text-red-700"><i class="fas fa-exclamation-triangle mr-2"></i>Validation failed: ${
+                err?.message || err
+            }</div>`
+        );
+    } finally {
+        setTimeout(() => {
+            els.loading.classList.add("hidden");
+            els.progressMatchesText.textContent = "Complete!";
+            els.progressMatchesBar.classList.add("bg-green-500");
+        }, 400);
+    }
+});
+
+// Import Matches
+els.btnImportMatches?.addEventListener("click", async () => {
+    const S = window.__matches_state;
+    if (!S) return;
+
+    try {
+        els.btnImportMatches.disabled = true;
+        els.btnImportMatches.textContent = "Importing…";
+        setMatchesProgress(5);
+
+        const replace = !!(
+            els.chkReplaceMatches && els.chkReplaceMatches.checked
+        );
+        const affected = S.affectedEvents || [];
+
+        if (replace && affected.length) {
+            const delOps = [];
+            for (const ev of affected) {
+                const snap = await getDocs(
+                    query(
+                        collection(db, "matches"),
+                        where("event_id", "==", ev)
+                    )
+                );
+                snap.forEach((d) =>
+                    delOps.push((batch) => batch.delete(d.ref))
+                );
+            }
+            if (delOps.length) await commitInChunks(delOps);
+        }
+        setMatchesProgress(40);
+
+        await ensurePlaceholderTeams(S.placeholdersByEvent);
+        setMatchesProgress(65);
+
+        const writeOps = S.matches.map((m) => (batch) => {
+            const payload = {
+                event_id: m.event_id,
+                competitor_a: m.competitor_a || null,
+                competitor_b: m.competitor_b || null,
+                score_a: null,
+                score_b: null,
+                status: "scheduled",
+                venue: m.venue || null,
+                scheduled_at: m.scheduled_at,
+                match_type: m.match_type,
+                ...(m.pool ? { pool: m.pool } : {}),
+            };
+            batch.set(doc(db, "matches", m.id), payload, { merge: true });
+        });
+        if (writeOps.length) await commitInChunks(writeOps, 400);
+
+        setMatchesProgress(100);
+        alert("✅ Matches imported successfully.");
+        await refreshFirestoreCounts();
+    } catch (err) {
+        console.error(err);
+        alert(`❌ Import failed: ${err?.message || err}`);
+    } finally {
+        els.btnImportMatches.disabled = false;
+        els.btnImportMatches.textContent = "Import Matches";
     }
 });
 
@@ -1054,17 +1380,25 @@ if (els.btnResetMatches) {
             return;
         }
         const ok = confirm(
-            `Reset matches (clear scores, set scheduled, reapply elim placeholders) for: ${events.join(
-                ", "
-            )}?\nQualifiers keep their original A1/B2/etc from your schedule.`
+            `Reset matches (clear scores, set scheduled, reapply elim placeholders) ` +
+                `AND clear awards for: ${events.join(", ")}?\n` +
+                `Qualifiers keep their original A1/B2/etc from your schedule. ` +
+                `Awards docs will be removed and republished automatically when finals conclude.`
         );
         if (!ok) return;
 
         try {
             els.btnResetMatches.disabled = true;
+
+            // 1) matches → scheduled + placeholders restored
             const { updated } = await resetMatchesForEvents(events);
+
+            // 2) awards → delete awards/{eventId}
+            const awardsCleared = await resetAwardsForEvents(events);
+
             alert(
-                `✅ Reset ${updated} match doc(s) across ${events.length} event(s).`
+                `✅ Reset ${updated} match doc(s) and cleared ${awardsCleared} awards doc(s)` +
+                    ` across ${events.length} event(s).`
             );
         } catch (e) {
             console.error(e);
