@@ -68,15 +68,20 @@ const err = (t) => {
 
 /* ───── per-event default durations (seconds) ─────
    Requirements:
-   - basketball: all 8 mins
+   - basketball: 8 mins (qualifiers), 15 mins (quarterfinals/semifinals/finals)
    - badminton: 10 mins (qualifiers/elims/bronze), 15 mins each final game (F1/F2/F3)
    - frisbee: 10 mins standard, 20 mins final (F-F1)
 */
 function defaultDurationSeconds(match) {
     const eventId = match.event_id || "";
     const type = match.match_type;
-    // Basketball 3v3: flat 8 min always
-    if (eventId === "basketball3v3") return 8 * 60;
+    // Basketball 3v3: 15 min for knockout stages, 8 min for qualifiers
+    if (eventId === "basketball3v3") {
+        if (type === "bronze" || type === "qf" || type === "semi" || type === "final") {
+            return 15 * 60;
+        }
+        return 8 * 60;
+    }
     // Frisbee: finals 20, others 10
     if (eventId === "frisbee5v5") {
         return type === "final" ? 20 * 60 : 10 * 60;
