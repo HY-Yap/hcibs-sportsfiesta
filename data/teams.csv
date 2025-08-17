@@ -1,51 +1,40 @@
-event_id,team_name,member_emails
-badminton_singles,BS-Team-01,user001@example.com
-badminton_singles,BS-Team-02,user002@example.com
-badminton_singles,BS-Team-03,user003@example.com
-badminton_singles,BS-Team-04,user004@example.com
-badminton_singles,BS-Team-05,user005@example.com
-badminton_singles,BS-Team-06,user006@example.com
-badminton_singles,BS-Team-07,user007@example.com
-badminton_singles,BS-Team-08,user008@example.com
-badminton_singles,BS-Team-09,user009@example.com
-badminton_singles,BS-Team-10,user010@example.com
-badminton_doubles,BD-Team-01,user011@example.com;user012@example.com
-badminton_doubles,BD-Team-02,user013@example.com;user014@example.com
-badminton_doubles,BD-Team-03,user015@example.com;user016@example.com
-badminton_doubles,BD-Team-04,user017@example.com;user018@example.com
-badminton_doubles,BD-Team-05,user019@example.com;user020@example.com
-badminton_doubles,BD-Team-06,user021@example.com;user022@example.com
-badminton_doubles,BD-Team-07,user023@example.com;user024@example.com
-badminton_doubles,BD-Team-08,user025@example.com;user026@example.com
-badminton_doubles,BD-Team-09,user027@example.com;user028@example.com
-badminton_doubles,BD-Team-10,user029@example.com;user030@example.com
-badminton_doubles,BD-Team-11,user031@example.com;user032@example.com
-badminton_doubles,BD-Team-12,user033@example.com;user034@example.com
-basketball3v3,BB-Team-01,user035@example.com;user036@example.com;user037@example.com
-basketball3v3,BB-Team-02,user038@example.com;user039@example.com;user040@example.com
-basketball3v3,BB-Team-03,user041@example.com;user042@example.com;user043@example.com
-basketball3v3,BB-Team-04,user044@example.com;user045@example.com;user046@example.com
-basketball3v3,BB-Team-05,user047@example.com;user048@example.com;user049@example.com
-basketball3v3,BB-Team-06,user050@example.com;user051@example.com;user052@example.com
-basketball3v3,BB-Team-07,user053@example.com;user054@example.com;user055@example.com
-basketball3v3,BB-Team-08,user056@example.com;user057@example.com;user058@example.com
-basketball3v3,BB-Team-09,user059@example.com;user060@example.com;user061@example.com
-basketball3v3,BB-Team-10,user062@example.com;user063@example.com;user064@example.com
-basketball3v3,BB-Team-11,user065@example.com;user066@example.com;user067@example.com
-basketball3v3,BB-Team-12,user068@example.com;user069@example.com;user070@example.com
-basketball3v3,BB-Team-13,user071@example.com;user072@example.com;user073@example.com
-basketball3v3,BB-Team-14,user074@example.com;user075@example.com;user076@example.com
-basketball3v3,BB-Team-15,user077@example.com;user078@example.com;user079@example.com
-basketball3v3,BB-Team-16,user080@example.com;user081@example.com;user082@example.com
-frisbee5v5,FR-Team-01,user083@example.com;user084@example.com;user085@example.com;user086@example.com;user087@example.com;user088@example.com;user089@example.com
-frisbee5v5,FR-Team-02,user090@example.com;user091@example.com;user092@example.com;user093@example.com;user094@example.com;user095@example.com;user096@example.com
-frisbee5v5,FR-Team-03,user097@example.com;user098@example.com;user099@example.com;user100@example.com;user101@example.com;user102@example.com;user103@example.com
-frisbee5v5,FR-Team-04,user104@example.com;user105@example.com;user106@example.com;user107@example.com;user108@example.com;user109@example.com;user110@example.com
-frisbee5v5,FR-Team-05,user111@example.com;user112@example.com;user113@example.com;user114@example.com;user115@example.com;user116@example.com;user117@example.com
-frisbee5v5,FR-Team-06,user118@example.com;user119@example.com;user120@example.com;user121@example.com;user122@example.com;user123@example.com;user124@example.com
-frisbee5v5,FR-Team-07,user125@example.com;user126@example.com;user127@example.com;user128@example.com;user129@example.com;user130@example.com;user131@example.com
-frisbee5v5,FR-Team-08,user132@example.com;user133@example.com;user134@example.com;user135@example.com;user136@example.com;user137@example.com;user138@example.com
-frisbee5v5,FR-Team-09,user139@example.com;user140@example.com;user141@example.com;user142@example.com;user143@example.com;user144@example.com;user145@example.com
-frisbee5v5,FR-Team-10,user146@example.com;user147@example.com;user148@example.com;user149@example.com;user150@example.com;user151@example.com;user152@example.com
-frisbee5v5,FR-Team-11,user153@example.com;user154@example.com;user155@example.com;user156@example.com;user157@example.com;user158@example.com;user159@example.com
-frisbee5v5,FR-Team-12,user160@example.com;user161@example.com;user162@example.com;user163@example.com;user164@example.com;user165@example.com;user166@example.com
+team_id,event_id,team_name,member_emails
+badminton_singles__SB1,badminton_singles,Yang Mu,231669h@student.hci.edu.sg
+badminton_singles__SB2,badminton_singles,Lin Chuhan ,linchuhan2@gmail.com
+badminton_singles__SB3,badminton_singles,Ong Yu Tong,debbieongyutong@gmail.com
+badminton_singles__SB4,badminton_singles,Chang Jia Ying,jiaying7267@gmail.com
+badminton_singles__SB5,badminton_singles,Bambang,bambanghardjo@gmail.com
+badminton_singles__SD1,badminton_singles,Emilie Lee Kai Jia,emilie_lee_kai_jia@students.edu.sg
+badminton_singles__SD2,badminton_singles,Queen Abrielle Santosa,queenabrielle.s@gmail.com
+badminton_singles__SD3,badminton_singles,Lim Geng Yang,arealme2011@gmail.com
+badminton_singles__SD4,badminton_singles,Tie Khay Lin,selinalavender2442@gmail.com
+badminton_singles__SD5,badminton_singles,Hu Bang Zhen,jaydenhu606@gmail.com
+badminton_doubles__DA1,badminton_doubles,6'7 Smashers,limchuanzen11@gmail.com;heejinwei7@gmail.com
+badminton_doubles__DA2,badminton_doubles,Oracle Red Bull Racing,justinyeoh18@gmail.com;toh_ky_shen@students.edu.sg
+badminton_doubles__DA3,badminton_doubles,Shuttleshock,jeaniceog@gmail.com;lathithaonguyen28@gmail.com
+badminton_doubles__DA4,badminton_doubles,Brr Brr Patapim,chandarrel@gmail.com;skywolf8998@gmail.com
+badminton_doubles__DA5,badminton_doubles,A6L,211635b@student.hci.edu.sg;bryanczb@gmail.com
+badminton_doubles__DA6,badminton_doubles,F505, melvinvcbc7@gmail.com;202161y@student.hci.edu.sg
+badminton_doubles__DO1,badminton_doubles,Elite Barbarians,jingyitay752@gmail.com;guinness978922@gmail.com
+badminton_doubles__DO2,badminton_doubles,Lazette,nj.basa09@gmail.com;valerianocmicah@gmail.com
+badminton_doubles__DO3,badminton_doubles,Pizzahut,seow_jiaxuan@students.edu.sg;nicoleooilinyen@gmail.com
+badminton_doubles__DO4,badminton_doubles,Catz,jyuhawkliow@gmail.com;matthewdarryll10@gmail.com
+badminton_doubles__DO5,badminton_doubles,Ooga Booga,minhkhang.mike@gmail.com;matthzimra@gmail.com
+badminton_doubles__DO6,badminton_doubles,Wario & Waluigi,jovan.the09@gmail.com;sutowo.ignacio@gmail.com
+frisbee5v5__A1,frisbee5v5,All Yellows,limchuanzen11@gmail.com;jt3x2022@gmail.com;jadenhowk@gmail.com;heejinwei7@gmail.com;xingfaychew@gmail.com;toh_ky_shen@students.edu.sg;chuawave@gmail.com
+frisbee5v5__A2,frisbee5v5,MCD,oscartay0815@gmail.com;andartha_bunarto@students.edu.sg;emilie_lee_kai_jia@students.edu.sg;emma_chye_xin_yi_2028@mgs.sch.edu.sg;253858e@student.hci.edu.sg;panyapong_tankuranun@students.edu.sg;arealme2011@gmail.com;phamsonquan200@gmail.com
+frisbee5v5__A3,frisbee5v5,Umbros,melvinvcbc7@gmail.com;0723yujinglim@gmail.com;ynzysooyz@gmail.com;cedrictaihonge@gmail.com;annayws2121@gmail.com;jaydenhu606@gmail.com;241719x@student.hci.edu.sg
+frisbee5v5__A4,frisbee5v5,Uncle Kim,jingyitay752@gmail.com;chandarrel@gmail.com;202161y@student.hci.edu.sg;wahkong.ng@gmail.com;202332u@student.hci.edu.sg;qiuyuekimyauyue@gmail.com
+frisbee5v5__A5,frisbee5v5,Aura Farmers,nicoleooilinyen@gmail.com;minhkhang.mike@gmail.com;xuelei0701@gmail.com;sutowo.ignacio@gmail.com;soon.ying.jin@gmail.com;awzhihui@gmail.com; turkeyflex6@gmail.com
+frisbee5v5__A6,frisbee5v5,Samboarders,shantivaleriewijaya@gmail.com;seow_jiaxuan@students.edu.sg;samrobbie.barrera@gmail.com;ngxinyu509@gmail.com;tanjkethan@gmail.com;braydenarato@gmail.com;matthewdarryll10@gmail.com
+frisbee5v5__A7,frisbee5v5,Ultimate YI,matthewlinsuryanto@gmail.com;nguyendaiduong2008hp@gmail.com;ducbn1404@gmail.com;linhanhams0301@gmail.com;bambanghardjo@gmail.com;zbtn8297@gmail.com
+basketball3v3__A1,basketball3v3,Let's Goh,chandarrel@gmail.com;202167u@student.hci.edu.sg;blankb01notasain@gmail.com
+basketball3v3__A2,basketball3v3,Bpians,myknee4shurt1@gmail.com;turkeyflex1@gmail.com;awzhihui@gmail.com
+basketball3v3__A3,basketball3v3,G1Squad,tonbabsesthapiyanon@gmail.com;supanutaroonpoonsup@gmail.com;christopherang222@gmail.com
+basketball3v3__A4,basketball3v3,The Shawties,qiqicool7788@gmail.com;lianleafang@gmail.com;emilie_lee_kai_jia@students.edu.sg;tanleeanne4@gmail.com;zong_keren@students.edu.sg
+basketball3v3__A5,basketball3v3,The J1zz Team,211537b@student.hci.edu.sg;truonglehuy2007@gmail.com;matthewlinsuryanto@gmail.com
+basketball3v3__B1,basketball3v3,Short Kings,ic3dl3mont3a@gmail.com;ng.justin1301@gmail.com;chawinnapaumporn10@gmail.com
+basketball3v3__B2,basketball3v3,6'7 Hoopers,heejinwei7@gmail.com;chuawave@gmail.com;limzenjie@gmail.com
+basketball3v3__B3,basketball3v3,Young NJs,braydenarato@gmail.com;latuan1790@gmail.com;dunkersamuelyang63@gmail.com
+basketball3v3__B4,basketball3v3,LePookies,toh_ky_shen@students.edu.sg;231669h@student.hci.edu.sg;jadenhowk@gmail.com
+basketball3v3__B5,basketball3v3,Nonchalant,202161y@student.hci.edu.sg;limchuanzen11@gmail.com;benlimjs@gmail.com
