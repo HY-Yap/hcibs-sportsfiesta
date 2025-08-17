@@ -130,10 +130,28 @@ function ordinal(n){
 }
 
 function rankingTable(eventId, data){
+    // Ensure responsive CSS for widening first (Team) column on small screens is injected once
+    if(!window.__rankingWidenCSS){
+        const style = document.createElement('style');
+        style.textContent = `@media (max-width: 640px){
+            table.ranking-table th:first-child, 
+            table.ranking-table td:first-child { min-width: 14rem; }
+        }`;
+        document.head.appendChild(style);
+        window.__rankingWidenCSS = true;
+    }
     const hasGroup = ['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId);
-    // Remove draws + overall ranking per request
-    const cols = ["Team","Matches Played","Wins","Losses","Points For","Points Against","Points Diff"]; if(hasGroup) cols.push("Group Rank");
-    const header = cols.map(c=>`<th class="px-3 py-2 text-center">${c}</th>`).join('');
+    // Column setup: insert separate Group column when grouped events
+    const cols = hasGroup
+        ? ["Team","Group","Matches Played","Wins","Losses","Points For","Points Against","Points Diff","Group Rank"]
+        : ["Team","Matches Played","Wins","Losses","Points For","Points Against","Points Diff"]; 
+    const header = cols.map((c,i)=>{
+        let extra = '';
+        if(c === 'Team') extra = ' w-72 md:w-65';
+        else if(c === 'Group') extra = ' w-14';
+        else extra = ' whitespace-nowrap';
+        return `<th class="px-3 py-2 text-center${extra}">${c}</th>`;
+    }).join('');
 
     // Determine unique pools present and assign colors
     const pools = Array.from(new Set(data.filter(d=>d.pool).map(d=>d.pool))).sort();
@@ -164,12 +182,8 @@ function rankingTable(eventId, data){
     });
 
     const rows = sorted.map(r=>`<tr class="${r.pool?poolColor(r.pool):'even:bg-gray-50'}">
-        <td class="px-3 py-2 font-medium text-center">
-            <div class="grid grid-cols-12 items-center justify-center">
-                <span class="col-span-10 text-center">${r.name || r.id}</span>
-                <span class="col-span-2 text-center">${r.pool ? `<span class="text-xs ${poolTagColor(r.pool)} px-1 py-0.5 rounded font-semibold">(${r.pool})</span>` : ''}</span>
-            </div>
-        </td>
+        <td class="px-3 py-2 font-medium text-center align-middle whitespace-normal md:whitespace-nowrap w-72 md:w-72 break-words">${r.name || r.id}</td>
+        ${hasGroup ? `<td class="px-3 py-2 text-center">${r.pool ? `<span class=\"text-xs ${poolTagColor(r.pool)} px-1 py-0.5 rounded font-semibold\">(${r.pool})</span>` : ''}</td>` : ''}
         <td class="px-3 py-2 text-center">${r.played}</td>
         <td class="px-3 py-2 text-center">${r.wins}</td>
         <td class="px-3 py-2 text-center">${r.losses}</td>
@@ -179,7 +193,7 @@ function rankingTable(eventId, data){
         ${hasGroup ? `<td class="px-3 py-2 text-center">${r.groupPlace ? ordinal(r.groupPlace) : '—'}</td>` : ''}
     </tr>`).join('') || `<tr><td colspan="${cols.length}" class="p-4 text-center text-gray-500">No data yet.</td></tr>`;
     const legend = pools.length ? `<div class="flex flex-wrap gap-2 text-xs mt-2">${pools.map((p,i)=>`<span class="px-2 py-1 rounded ${colorPalette[i % colorPalette.length]}">Group ${p}</span>`).join('')}</div>` : '';
-    return `<div class="overflow-x-auto"><table class="min-w-full table-auto text-sm md:text-base whitespace-nowrap">
+    return `<div class="overflow-x-auto"><table class="ranking-table min-w-full table-auto text-sm md:text-base whitespace-nowrap">
      <thead class="bg-primary text-white"><tr>${header}</tr></thead>
      <tbody>${rows}</tbody></table>${legend}</div>`;
 }

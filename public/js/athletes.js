@@ -10,6 +10,7 @@ import {
 
 let allTeams = [];
 let currentFilter = "all";
+let emailToName = {}; // email -> full name mapping
 
 // Event icons
 const eventIcons = {
@@ -55,9 +56,30 @@ async function loadAllTeams() {
             throw new Error("Firebase database not initialized");
         }
 
-        const teamsSnap = await getDocs(
-            collection(db, "teams")
-        );
+        const teamsSnap = await getDocs(collection(db, "teams"));
+
+        // Build email set to optionally limit user lookup (we'll just load all users if small dataset)
+        const emailSet = new Set();
+        teamsSnap.forEach(doc => {
+            const data = doc.data() || {};
+            (data.member_emails || []).forEach(e => emailSet.add(e));
+        });
+
+        // Attempt to load user profiles for full names
+        try {
+            const usersSnap = await getDocs(collection(db, "users"));
+            usersSnap.forEach(uDoc => {
+                const u = uDoc.data() || {};
+                const email = (u.email || u.userEmail || "").toLowerCase();
+                if (!email) return;
+                // Only store if part of any team (to keep map minimal)
+                if (emailSet.size === 0 || emailSet.has(email)) {
+                    emailToName[email] = u.full_name || u.name || u.displayName || email.split("@")[0];
+                }
+            });
+        } catch (userErr) {
+            console.warn("Could not load users collection for full names, falling back to email prefixes:", userErr);
+        }
 
         allTeams = teamsSnap.docs.map((doc) => ({
             id: doc.id,
@@ -148,17 +170,16 @@ function createTeamCard(team) {
             )
             .join("");
     } else if (team.member_emails && team.member_emails.length > 0) {
-        // Extract names from emails if member_names not available
+        // Use full names from users map when available, fallback to email prefix
         const names = team.member_emails.map((email) => {
+            const key = (email || "").toLowerCase();
+            if (emailToName[key]) return emailToName[key];
             const username = email.split("@")[0];
             return username.charAt(0).toUpperCase() + username.slice(1);
         });
-        playersHtml = names
-            .map(
-                (name) =>
-                    `<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm mr-1 mb-1">${name}</span>`
-            )
-            .join("");
+        playersHtml = names.map(
+            (name) => `<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm mr-1 mb-1">${name}</span>`
+        ).join("");
     } else {
         playersHtml =
             '<span class="text-gray-500 text-sm">No members listed</span>';
