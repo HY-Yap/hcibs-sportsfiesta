@@ -133,7 +133,7 @@ function rankingTable(eventId, data){
     const hasGroup = ['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId);
     // Remove draws + overall ranking per request
     const cols = ["Team","Matches Played","Wins","Losses","Points For","Points Against","Points Diff"]; if(hasGroup) cols.push("Group Rank");
-    const header = cols.map(c=>`<th class="px-3 py-2 text-center">${c}</th>`).join('');
+    const header = cols.map(c=>`<th class="px-2 py-2 text-center text-xs sm:text-sm">${c}</th>`).join('');
 
     // Determine unique pools present and assign colors
     const pools = Array.from(new Set(data.filter(d=>d.pool).map(d=>d.pool))).sort();
@@ -164,10 +164,10 @@ function rankingTable(eventId, data){
     });
 
     const rows = sorted.map(r=>`<tr class="${r.pool?poolColor(r.pool):'even:bg-gray-50'}">
-        <td class="px-3 py-2 font-medium text-center">
-            <div class="grid grid-cols-12 items-center justify-center">
-                <span class="col-span-10 text-center">${r.name || r.id}</span>
-                <span class="col-span-2 text-center">${r.pool ? `<span class="text-xs ${poolTagColor(r.pool)} px-1 py-0.5 rounded font-semibold">(${r.pool})</span>` : ''}</span>
+        <td class="px-2 py-2 font-medium text-center">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-1">
+                <span class="text-center">${r.name || r.id}</span>
+                ${r.pool ? `<span class="text-xs ${poolTagColor(r.pool)} px-2 py-1 rounded font-semibold mx-auto sm:mx-0">(${r.pool})</span>` : ''}
             </div>
         </td>
         <td class="px-3 py-2 text-center">${r.played}</td>
