@@ -82,9 +82,12 @@ function defaultDurationSeconds(match) {
         }
         return 8 * 60;
     }
-    // Frisbee: finals 20, others 10
+    // Frisbee: 15 min for bronze/final/bonus, 8 min for qualifiers
     if (eventId === "frisbee5v5") {
-        return type === "final" ? 20 * 60 : 10 * 60;
+        if (type === "bronze" || type === "final" || type === "bonus") {
+            return 15 * 60;
+        }
+        return 8 * 60;
     }
     // Badminton singles & doubles: finals 15, others 10
     if (eventId.startsWith("badminton")) {
