@@ -573,9 +573,11 @@ exports.revealBasketballElims = functions.firestore
         console.log(`🏀 Basketball function triggered for ${ctx.params.matchId}`);
         console.log(`🏀 Status change: ${before.status} → ${after.status}`);
         console.log(`🏀 Event ID: ${after.event_id}, Match type: ${after.match_type}`);
-
-        if (!(before.status === "live" && after.status === "final")) {
-            console.log(`🏀 Skipping: not live→final transition`);
+        // Broaden trigger: any transition INTO final (scheduled/live/other -> final)
+        if (after.status === 'final' && before.status !== 'final') {
+            // proceed
+        } else {
+            console.log('🏀 Skip: not a transition into final');
             return null;
         }
         if (after.event_id !== "basketball3v3") {
@@ -650,44 +652,29 @@ exports.revealBasketballElims = functions.firestore
         const A1 = A[0], A2 = A[1], B1 = B[0], B2 = B[1];
         console.log("🏀 Semi Seeds:", { A1, A2, B1, B2 });
 
-        // 4) write SF teams: A1 vs B2, B1 vs A2 (cross-bracket)
-        const sfMap = {
-            "B-SF1": { a: "BQF1W", b: "BQF2W" }, // Will be filled by advance function
-            "B-SF2": { a: "BQF3W", b: "BQF4W" }, // Will be filled by advance function
+        // 4) write SF teams if still placeholders or missing
+        const sf1Ref = db.doc('matches/B-SF1');
+        const sf2Ref = db.doc('matches/B-SF2');
+        const [sf1Doc, sf2Doc] = await Promise.all([sf1Ref.get(), sf2Ref.get()]);
+
+        const needsUpdate = (docSnap) => {
+            if (!docSnap.exists) return false;
+            const d = docSnap.data();
+            const aId = d.competitor_a?.id; const bId = d.competitor_b?.id;
+            const isPlaceholder = (id) => !id || /^B(QF|SF)/.test(id) || /^BW[1-8]$/.test(id);
+            return isPlaceholder(aId) || isPlaceholder(bId);
         };
 
-        // Store the advancement mapping for the advance function
-        const advanceMap = {
-            BQF1W: A1, // Pool A winner
-            BQF2W: B2, // Pool B runner-up  
-            BQF3W: B1, // Pool B winner
-            BQF4W: A2, // Pool A runner-up
-        };
+        if (!needsUpdate(sf1Doc) && !needsUpdate(sf2Doc)) {
+            console.log('🏀 Semis already seeded, skipping update');
+            return null;
+        }
 
         const batch = db.batch();
-        
-        // Update SF matches with proper teams
-        const sf1Ref = db.doc("matches/B-SF1");
-        const sf2Ref = db.doc("matches/B-SF2");
-        
-        batch.update(sf1Ref, {
-            competitor_a: { id: A1 },
-            competitor_b: { id: B2 },
-            score_a: null,
-            score_b: null,
-            status: "scheduled",
-        });
-        
-        batch.update(sf2Ref, {
-            competitor_a: { id: B1 },
-            competitor_b: { id: A2 },
-            score_a: null,
-            score_b: null,
-            status: "scheduled",
-        });
-
+        if (needsUpdate(sf1Doc)) batch.update(sf1Ref, { competitor_a: {id: A1}, competitor_b: {id: B2}, score_a: null, score_b: null, status: 'scheduled' });
+        if (needsUpdate(sf2Doc)) batch.update(sf2Ref, { competitor_a: {id: B1}, competitor_b: {id: A2}, score_a: null, score_b: null, status: 'scheduled' });
         await batch.commit();
-        console.log("✅ BB3v3: Semi-finals revealed/updated");
+        console.log('✅ BB3v3: Semis seeded');
         return null;
     });
 
@@ -701,9 +688,9 @@ exports.revealFrisbeeElims = functions.firestore
         console.log(`🥏 Frisbee function triggered for ${ctx.params.matchId}`);
         console.log(`🥏 Status change: ${before.status} → ${after.status}`);
         console.log(`🥏 Event ID: ${after.event_id}, Match type: ${after.match_type}`);
-
-        if (!(before.status === "live" && after.status === "final")) {
-            console.log(`🥏 Skipping: not live→final transition`);
+        // Broaden trigger just like basketball
+        if (!(after.status === 'final' && before.status !== 'final')) {
+            console.log('🥏 Skip: not a transition into final');
             return null;
         }
         if (after.event_id !== "frisbee5v5") {
@@ -774,30 +761,58 @@ exports.revealFrisbeeElims = functions.firestore
 
         console.log("🥏 Frisbee final standings:", { first, second, third, fourth });
 
+        const bRef = db.doc('matches/F-B1');
+        const fRef = db.doc('matches/F-F1');
+        const [bDoc, fDoc] = await Promise.all([bRef.get(), fRef.get()]);
+        const isPlace = (id) => !id || /^FSF[12][WL]$/.test(id) || /^FR[12]W$/.test(id);
+        const needB = !bDoc.exists || isPlace(bDoc.data().competitor_a?.id) || isPlace(bDoc.data().competitor_b?.id);
+        const needF = !fDoc.exists || isPlace(fDoc.data().competitor_a?.id) || isPlace(fDoc.data().competitor_b?.id);
+        if(!needB && !needF){
+            console.log('🥏 Bronze/final already seeded, skipping');
+            return null;
+        }
         const batch = db.batch();
-
-        // Bronze match: 3rd vs 4th
-        batch.update(db.doc("matches/F-B1"), {
-            competitor_a: { id: third },
-            competitor_b: { id: fourth },
-            score_a: null,
-            score_b: null,
-            status: "scheduled",
-        });
-
-        // Final match: 1st vs 2nd
-        batch.update(db.doc("matches/F-F1"), {
-            competitor_a: { id: first },
-            competitor_b: { id: second },
-            score_a: null,
-            score_b: null,
-            status: "scheduled",
-        });
-
+        if(needB) batch.update(bRef, { competitor_a: {id: third}, competitor_b: {id: fourth}, score_a: null, score_b: null, status: 'scheduled' });
+        if(needF) batch.update(fRef, { competitor_a: {id: first}, competitor_b: {id: second}, score_a: null, score_b: null, status: 'scheduled' });
         await batch.commit();
-        console.log("✅ frisbee: bronze and final matches revealed");
+        console.log('✅ frisbee: bronze/final seeded');
         return null;
     });
+
+// ───────── Manual reseed callable (basketball & frisbee) ─────────
+exports.reseedElims = functions.https.onCall(async (data, context) => {
+    const { sport } = data || {};
+    if(!sport || !['basketball3v3','frisbee5v5'].includes(sport)){
+        return { ok:false, error:'sport must be basketball3v3 or frisbee5v5'};
+    }
+    if(sport === 'basketball3v3'){
+        // mimic logic above without needing an update trigger
+        const qualsSnap = await db.collection('matches').where('event_id','==','basketball3v3').where('match_type','==','qualifier').get();
+        if(!qualsSnap.docs.every(d=>d.data().status==='final')) return { ok:false, error:'qualifiers not all final'};
+        const pools = {};
+        for(const doc of qualsSnap.docs){
+            const d = doc.data();
+            if(!d.pool) continue; const pool=d.pool; pools[pool]??={};
+            const a=d.competitor_a.id,b=d.competitor_b.id,sa=d.score_a,sb=d.score_b;
+            const upd=(id,win,diff)=>{ const t=pools[pool][id]??{wins:0,diff:0}; t.wins+=win; t.diff+=diff; pools[pool][id]=t; };
+            if(sa>sb){upd(a,1,sa-sb);upd(b,0,sb-sa);} else if(sb>sa){upd(b,1,sb-sa);upd(a,0,sa-sb);} else {upd(a,0,0);upd(b,0,0);} }
+        const rank=obj=>Object.entries(obj).sort(([,A],[,B])=>B.wins-A.wins||B.diff-A.diff).map(([id])=>id);
+        const A=rank(pools['A']||{}),B=rank(pools['B']||{}); if(A.length<2||B.length<2) return { ok:false, error:'not enough teams ranked'};
+        const [A1,A2,B1,B2]=[A[0],A[1],B[0],B[1]];
+        const sf1Ref=db.doc('matches/B-SF1'); const sf2Ref=db.doc('matches/B-SF2');
+        const batch=db.batch(); batch.update(sf1Ref,{competitor_a:{id:A1},competitor_b:{id:B2},score_a:null,score_b:null,status:'scheduled'}); batch.update(sf2Ref,{competitor_a:{id:B1},competitor_b:{id:A2},score_a:null,score_b:null,status:'scheduled'}); await batch.commit();
+        return { ok:true, seeded:{A1,A2,B1,B2} };
+    }
+    if(sport === 'frisbee5v5'){
+        const qualsSnap = await db.collection('matches').where('event_id','==','frisbee5v5').where('match_type','==','qualifier').get();
+        if(!qualsSnap.docs.every(d=>d.data().status==='final')) return { ok:false, error:'qualifiers not all final'};
+        const standings={};
+        for(const doc of qualsSnap.docs){ const d=doc.data(); const a=d.competitor_a.id,b=d.competitor_b.id,sa=d.score_a,sb=d.score_b; const upd=(id,win,diff)=>{ const t=standings[id]??{wins:0,diff:0}; t.wins+=win; t.diff+=diff; standings[id]=t; }; if(sa>sb){upd(a,1,sa-sb);upd(b,0,sb-sa);} else if(sb>sa){upd(b,1,sb-sa);upd(a,0,sa-b);} else {upd(a,0,0);upd(b,0,0);} }
+        const ranked=Object.entries(standings).sort(([,a],[,b])=>b.wins-a.wins||b.diff-a.diff).map(([id])=>id); if(ranked.length<4) return { ok:false, error:'need at least 4 ranked'};
+        const [first,second,third,fourth]=[ranked[0],ranked[1],ranked[2],ranked[3]]; const batch=db.batch(); batch.update(db.doc('matches/F-B1'),{competitor_a:{id:third},competitor_b:{id:fourth},score_a:null,score_b:null,status:'scheduled'}); batch.update(db.doc('matches/F-F1'),{competitor_a:{id:first},competitor_b:{id:second},score_a:null,score_b:null,status:'scheduled'}); await batch.commit();
+        return { ok:true, seeded:{first,second,third,fourth} };
+    }
+});
 
 /* ───────── seriesWatcher (badminton) – progresses BO3 series & hides un-needed G3 ─────────
    ① Trigger: any series match ("semi" | "bronze" | "final") moves   live ➜ final
@@ -1106,18 +1121,42 @@ exports.advanceBasketballElims = functions.firestore
 exports.advanceFrisbeeElims = functions.firestore
     .document("matches/{matchId}")
     .onUpdate(async (chg, ctx) => {
-        const before = chg.before.data(),
-            after = chg.after.data();
-        if (!(before.status === "live" && after.status === "final"))
-            return null;
+        const before = chg.before.data();
+        const after = chg.after.data();
+        // Broaden trigger: any transition into final
+        if (!(after.status === 'final' && before.status !== 'final')) return null;
         if (after.event_id !== "frisbee5v5") return null;
         if (!["bronze", "final"].includes(after.match_type))
             return null;
 
-        // For the new 7-team round robin format, there's no advancement needed
-        // Bronze match (3rd vs 4th) and Final (1st vs 2nd) are standalone
-        // Awards are handled by autoFillAwards
+        // Seed bonus match champion slot when final completes
+        if (after.match_type === 'final') {
+            try {
+                const aId = after.competitor_a?.id;
+                const bId = after.competitor_b?.id;
+                if (aId && bId && typeof after.score_a === 'number' && typeof after.score_b === 'number') {
+                    const winnerId = after.score_a > after.score_b ? aId : bId;
+                    const bonusRef = db.doc('matches/F-BON1');
+                    const bonusSnap = await bonusRef.get();
+                    if (bonusSnap.exists) {
+                        const curA = bonusSnap.data().competitor_a?.id;
+                        if (!curA || curA === 'FCHAMP') {
+                            await bonusRef.update({ competitor_a: { id: winnerId } });
+                            console.log(`🥏 Bonus match champion slot set to ${winnerId}`);
+                        } else {
+                            console.log('🥏 Bonus match already has champion slot, skipping');
+                        }
+                    } else {
+                        console.warn('🥏 Bonus match document F-BON1 not found');
+                    }
+                } else {
+                    console.warn('🥏 Final match missing competitor IDs or scores; cannot seed bonus');
+                }
+            } catch (e) {
+                console.error('❌ Error seeding bonus match champion slot:', e);
+            }
+        }
 
-        console.log(`✅ frisbee: ${after.match_type} match completed`);
+        console.log(`✅ frisbee: ${after.match_type} match completed (advancer run)`);
         return null;
     });

@@ -265,12 +265,12 @@ async function loadEventRules() {
         const data = d.data() || {};
         const max = Number(data.roster_max) || 1;
         const min = Number(data.roster_min ?? max);
-        rules[ev] = {
-            min,
-            max,
-            label: data.name || ev,
-            status: data.status || "planning",
-        };
+    let finalMin = min;
+    let finalMax = max;
+    // Hard overrides for specific sports
+    if (ev === 'frisbee5v5') { finalMin = 5; finalMax = 7; }
+    if (ev === 'basketball3v3') { finalMin = 3; finalMax = 4; }
+    rules[ev] = { min: finalMin, max: finalMax, label: data.name || ev, status: data.status || 'planning' };
     });
     return rules;
 }

@@ -126,17 +126,9 @@ function isPlaceholder(teamId, match) {
     // Badminton semi placeholders S1..S4 / D1..D4
     if (/^(?:S|D)[1-4]$/.test(teamId)) return true;
 
-    // Frisbee placeholders used in elims - UPDATE THESE PATTERNS
-    if (/^F(?:R[12]W|QF[1-4]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true;
-
-    // Only treat A1..C4 as placeholders for *frisbee elims*, not for basketball
-    if (
-        match?.event_id === "frisbee5v5" &&
-        match?.match_type !== "qualifier" &&
-        /^[ABC][1-4]$/.test(teamId)
-    ) {
-        return true;
-    }
+    // Legacy frisbee bracket placeholders (kept for backward compatibility) – new format only uses CHAMP optionally
+    if (/^F(?:R[12]W|QF[1-4]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true; // old progression tags
+    // NOTE: In new 7‑team RR → bronze/final, team IDs like A1..A7 are REAL and must not be treated as placeholders.
 
     return false;
 }
@@ -144,56 +136,20 @@ function isPlaceholder(teamId, match) {
 function depsSatisfied(match, all) {
     const statusOf = (id) => all.find((m) => m.id === id)?.status;
 
-    // ── Basketball (single-game) ──
+    // ── Basketball (UPDATED: 2 pools A/B → direct semis) ──
     if (match.event_id === "basketball3v3") {
-        // Allow QFs as soon as all qualifiers are final (even if BW* still present)
-        if (match.match_type === "qf") {
-            return allQualsFinal("basketball3v3", all);
-        }
-        if (match.id === "B-SF1") {
-            return ["B-QF1", "B-QF2"].every((x) => statusOf(x) === "final");
-        }
-        if (match.id === "B-SF2") {
-            return ["B-QF3", "B-QF4"].every((x) => statusOf(x) === "final");
-        }
-        if (/^B-(F1|B1)$/.test(match.id)) {
-            return ["B-SF1", "B-SF2"].every((x) => statusOf(x) === "final");
-        }
+        const qualsDone = allQualsFinal("basketball3v3", all);
+        if (["B-SF1", "B-SF2"].includes(match.id)) return qualsDone; // reveal semis when all qualifiers final
+        if (/^B-(F1|B1)$/.test(match.id)) return ["B-SF1", "B-SF2"].every((x) => statusOf(x) === "final");
     }
 
-    // ── Frisbee ── (Fixed dependency logic)
+    // ── Frisbee (UPDATED: 7‑team round robin → bronze/final) ──
     if (match.event_id === "frisbee5v5") {
         const qualsDone = all
-            .filter(
-                (m) =>
-                    m.event_id === "frisbee5v5" && m.match_type === "qualifier"
-            )
+            .filter((m) => m.event_id === "frisbee5v5" && m.match_type === "qualifier")
             .every((m) => m.status === "final");
-
-        // Redemption (only after all qualifiers done)
-        if (/^F-R[12]$/.test(match.id)) return qualsDone;
-
-        // QF1/QF2: show only after BOTH redemption matches are FINAL
-        if (/^F-QF[12]$/.test(match.id)) {
-            return statusOf("F-R1") === "final" && statusOf("F-R2") === "final";
-        }
-
-        // 🔥 QF3/QF4: only check if redemption is done, NOT team confirmation here
-        if (match.id === "F-QF3") return statusOf("F-R1") === "final";
-        if (match.id === "F-QF4") return statusOf("F-R2") === "final";
-
-        // SFs wait for their QFs
-        if (match.id === "F-SF1")
-            return ["F-QF1", "F-QF3"].every((x) => statusOf(x) === "final");
-        if (match.id === "F-SF2")
-            return ["F-QF2", "F-QF4"].every((x) => statusOf(x) === "final");
-
-        // Bronze/Final wait for both SFs
-        if (/^F-(?:F1|B1)$/.test(match.id))
-            return ["F-SF1", "F-SF2"].every((x) => statusOf(x) === "final");
-
-        // Bonus waits for Final
-        if (match.id === "F-BON1") return statusOf("F-F1") === "final";
+        if (/^F-(F1|B1)$/.test(match.id)) return qualsDone; // show bronze/final after all qualifiers
+        if (match.id === "F-BON1") return statusOf("F-F1") === "final"; // bonus after final
     }
 
     // ── Badminton BO3: only show F2/F3 or B2/B3 after game 1 has started ──
@@ -558,6 +514,25 @@ async function loadMatch(id, silent = false) {
     renderNamesAndScores(m.score_a ?? 0, m.score_b ?? 0);
 
     label.textContent = `${id} · ${m.venue}`;
+
+    // Fallback: if bonus match still has FCHAMP placeholder, resolve using F-F1 result
+    if (id === 'F-BON1' && m.competitor_a?.id === 'FCHAMP') {
+        try {
+            const finalSnap = await getDocs(query(collection(db,'matches'), where('__name__','==','F-F1')));
+            const finalDoc = finalSnap.docs[0];
+            if (finalDoc) {
+                const fd = finalDoc.data();
+                if (fd.status === 'final' && typeof fd.score_a === 'number' && typeof fd.score_b === 'number') {
+                    const champId = fd.score_a > fd.score_b ? fd.competitor_a?.id : fd.competitor_b?.id;
+                    if (champId) {
+                        origRed = champId; // temporarily show champion until backend seeds
+                        redT.textContent = champId;
+                        console.log('Resolved FCHAMP placeholder to', champId);
+                    }
+                }
+            }
+        } catch(e){ console.warn('Could not resolve FCHAMP placeholder', e); }
+    }
     // Set default timer only if match not started yet
     if (m.status === "scheduled") {
         const secs = defaultDurationSeconds(m);

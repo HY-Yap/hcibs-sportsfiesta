@@ -133,6 +133,12 @@ function rankingTable(eventId, data){
     const hasGroup = ['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId);
     // Remove draws + overall ranking per request
     const cols = ["Team","Matches Played","Wins","Losses","Points For","Points Against","Points Diff"]; if(hasGroup) cols.push("Group Rank");
+    const fmtDiff = v => {
+        if(v === undefined || v === null) return 0;
+        const n = Number(v);
+        if(isNaN(n)) return v;
+        return n>0 ? `+${n}` : `${n}`;
+    };
     const header = cols.map(c=>`<th class="px-2 py-2 text-center text-xs sm:text-sm">${c}</th>`).join('');
 
     // Determine unique pools present and assign colors
@@ -175,7 +181,7 @@ function rankingTable(eventId, data){
         <td class="px-3 py-2 text-center">${r.losses}</td>
         <td class="px-3 py-2 text-center">${r.pointsFor || 0}</td>
         <td class="px-3 py-2 text-center">${r.pointsAgainst || 0}</td>
-        <td class="px-3 py-2 text-center">${r.pointsDiff || 0}</td>
+    <td class="px-3 py-2 text-center">${fmtDiff(r.pointsDiff || 0)}</td>
         ${hasGroup ? `<td class="px-3 py-2 text-center">${r.groupPlace ? ordinal(r.groupPlace) : '—'}</td>` : ''}
     </tr>`).join('') || `<tr><td colspan="${cols.length}" class="p-4 text-center text-gray-500">No data yet.</td></tr>`;
     const legend = pools.length ? `<div class="flex flex-wrap gap-2 text-xs mt-2">${pools.map((p,i)=>`<span class="px-2 py-1 rounded ${colorPalette[i % colorPalette.length]}">Group ${p}</span>`).join('')}</div>` : '';
@@ -250,6 +256,7 @@ async function computeRankings(eventId, existingMatches){
     
     // Filter out placeholder teams from final rankings display
     let list = Array.from(stats.values())
+        .filter(rec => rec.id !== 'IBP') // Exclude invitational/IBP team from rankings
         .filter(rec => !isPlaceholder(rec.id, {event_id: eventId, match_type: 'qualifier'})) // Remove placeholders from display
         .sort((x,y)=>{
         if(y.wins!==x.wins) return y.wins-x.wins; // More wins = better
@@ -270,9 +277,9 @@ async function computeRankings(eventId, existingMatches){
     poolFinals.forEach(m=> { 
         const aId=m.competitor_a?.id, bId=m.competitor_b?.id; 
         if(!aId||!bId) return; 
-        const aIsReal = !isPlaceholder(aId, {event_id: eventId});
-        const bIsReal = !isPlaceholder(bId, {event_id: eventId});
-        if(!(aIsReal && bIsReal)) return; // Only count if both are real for pool stats
+    const aIsReal = !isPlaceholder(aId, {event_id: eventId}) && aId !== 'IBP';
+    const bIsReal = !isPlaceholder(bId, {event_id: eventId}) && bId !== 'IBP';
+    if(!(aIsReal && bIsReal)) return; // Require both real & not IBP
         
         const a=ensureP(aId), b=ensureP(bId); 
         const as=m.score_a??0, bs=m.score_b??0;
@@ -305,25 +312,18 @@ function isPlaceholder(teamId, match) {
     if (/^(?:S|D)[FB]W\d+$/.test(teamId)) return true;
 
     // Basketball placeholders (seed & progression tags)
-    if (/^BW[1-8]$/.test(teamId)) return true;
-    if (/^B(?:QF[1-4]W|SF[12][WL])$/.test(teamId)) return true;
+    if (/^BW[1-8]$/.test(teamId)) return true; // (legacy) pool winners
+    if (/^B(?:QF[1-4]W|SF[12][WL])$/.test(teamId)) return true; // (legacy) progression tags from old bracket
 
     // (Optional) badminton semi placeholders (S1..S4 / D1..D4)
     // Only treat as placeholders for badminton, NOT basketball
     if (match?.event_id !== "basketball3v3" && /^(?:S|D)[1-4]$/.test(teamId)) return true;
 
-    // Frisbee placeholders used in elims
-    if (/^F(?:R[12]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true;
+    // Frisbee legacy bracket placeholders (no longer used in new RR→F/B format)
+    if (/^F(?:R[12]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true; // keep CHAMP for bonus game placeholder
 
-    // 🔴 IMPORTANT: Only treat A1..C4 as placeholders for frisbee elims,
-    // not for basketball.
-    if (
-        match?.event_id === "frisbee5v5" &&
-        match?.match_type !== "qualifier" &&
-        /^[ABC][1-4]$/.test(teamId)
-    ) {
-        return true;
-    }
+    // NOTE: In the new frisbee format we advance ORIGINAL team IDs (A1..A7) directly.
+    // We no longer treat A1..A4 as placeholders; they are real team IDs now.
 
     return false;
 }
@@ -331,23 +331,18 @@ function isPlaceholder(teamId, match) {
 function depsSatisfied(match, all) {
     const statusOf = (id) => all.find((m) => m.id === id)?.status;
 
-    // ── Basketball ──
+    // ── Basketball (NEW: 2 pools A/B ➜ direct semis) ──
     if (match.event_id === "basketball3v3") {
-        // QF matches need all qualifiers to be final
-        if (/^B-QF[1-4]$/.test(match.id)) {
-            return all
-                .filter(
-                    (m) =>
-                        m.event_id === "basketball3v3" &&
-                        m.match_type === "qualifier"
-                )
-                .every((m) => m.status === "final");
-        }
+        // All qualifiers done?
+        const qualsDone = all
+            .filter(
+                (m) =>
+                    m.event_id === "basketball3v3" &&
+                    m.match_type === "qualifier"
+            )
+            .every((m) => m.status === "final");
 
-        if (match.id === "B-SF1")
-            return ["B-QF1", "B-QF2"].every((x) => statusOf(x) === "final");
-        if (match.id === "B-SF2")
-            return ["B-QF3", "B-QF4"].every((x) => statusOf(x) === "final");
+        if (["B-SF1", "B-SF2"].includes(match.id)) return qualsDone; // reveal semis once all quals final
         if (/^B-(F1|B1)$/.test(match.id))
             return ["B-SF1", "B-SF2"].every((x) => statusOf(x) === "final");
     }
@@ -359,39 +354,17 @@ function depsSatisfied(match, all) {
         return st === "live" || st === "final";
     }
 
-    // ── Frisbee ── (Fixed dependency logic)
+    // ── Frisbee (NEW: 7-team RR ➜ bronze/final) ──
     if (match.event_id === "frisbee5v5") {
         const qualsDone = all
             .filter(
                 (m) =>
-                    m.event_id === "frisbee5v5" && m.match_type === "qualifier"
+                    m.event_id === "frisbee5v5" &&
+                    m.match_type === "qualifier"
             )
             .every((m) => m.status === "final");
-
-        // Redemption (only after all qualifiers done)
-        if (/^F-R[12]$/.test(match.id)) return qualsDone;
-
-        // QF1/QF2: show only after BOTH redemption matches are FINAL
-        if (/^F-QF[12]$/.test(match.id)) {
-            return statusOf("F-R1") === "final" && statusOf("F-R2") === "final";
-        }
-
-        // 🔥 QF3/QF4: only check if redemption is done, NOT team confirmation here
-        if (match.id === "F-QF3") return statusOf("F-R1") === "final";
-        if (match.id === "F-QF4") return statusOf("F-R2") === "final";
-
-        // SFs wait for their QFs
-        if (match.id === "F-SF1")
-            return ["F-QF1", "F-QF3"].every((x) => statusOf(x) === "final");
-        if (match.id === "F-SF2")
-            return ["F-QF2", "F-QF4"].every((x) => statusOf(x) === "final");
-
-        // Bronze/Final wait for both SFs
-        if (/^F-(?:F1|B1)$/.test(match.id))
-            return ["F-SF1", "F-SF2"].every((x) => statusOf(x) === "final");
-
-        // Bonus waits for Final
-        if (match.id === "F-BON1") return statusOf("F-F1") === "final";
+        if (/^F-(F1|B1)$/.test(match.id)) return qualsDone; // show bronze & final once all quals complete
+        if (match.id === "F-BON1") return statusOf("F-F1") === "final"; // bonus after final
     }
 
     return true;
@@ -409,25 +382,11 @@ function shouldShowMatch(match, allMatches) {
         !isPlaceholder(competitor_b?.id, match);
     const hasStarted = status === "live" || status === "final";
 
-    // Allow Basketball elims (QF/SF/B/F) to show once deps are met,
-    // even if names are still BW1..BW8, BQF1W etc.
-    if (match.event_id === "basketball3v3" && match_type !== "qualifier") {
-        return true; // depsSatisfied already enforced above
-    }
+    // Basketball: show semis / bronze / final as soon as deps satisfied (teams will be seeded server-side)
+    if (match.event_id === "basketball3v3" && match_type !== "qualifier") return true;
 
-    // Allow Frisbee elims (R/QF/SF/F/BON) to show once deps are met,
-    // even if names are still A1/B2 etc.
-    if (match.event_id === "frisbee5v5" && match_type !== "qualifier") {
-        return hasStarted || bothConfirmed || true; // depsSatisfied already true
-    }
-
-    // For Frisbee QF3/QF4: require BOTH dependency AND confirmed teams
-    if (match.event_id === "frisbee5v5" && /^F-QF[34]$/.test(match.id)) {
-        const bothConfirmed =
-            !isPlaceholder(competitor_a?.id, match) &&
-            !isPlaceholder(competitor_b?.id, match);
-        return bothConfirmed;
-    }
+    // Frisbee: show bronze/final/bonus as soon as deps satisfied
+    if (match.event_id === "frisbee5v5" && match_type !== "qualifier") return true;
 
     return bothConfirmed || hasStarted;
 }
