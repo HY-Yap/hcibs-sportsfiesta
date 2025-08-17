@@ -30,7 +30,7 @@ async function makeAdmin(email) {
                 // Create Firebase Auth user
                 user = await auth.createUser({
                     email: email,
-                    displayName: "Admin User",
+                    displayName: name,
                     password: "TempPassword123!",  // Change this immediately
                     emailVerified: true,
                     disabled: false,
@@ -60,7 +60,7 @@ async function makeAdmin(email) {
         } else {
             // Create new user document
             await userDocRef.set({
-                full_name: "Admin User",
+                full_name: name,
                 email: email,
                 role: "admin",
                 created_at: new Date(),
@@ -83,6 +83,7 @@ async function makeAdmin(email) {
 
 // Get email from command line argument
 const email = process.argv[2];
+const name = process.argv[3] || "Admin User";  // Default to "Admin User"
 
 if (!email) {
     console.log("Usage: node scripts/makeAdmin.mjs <email>");
