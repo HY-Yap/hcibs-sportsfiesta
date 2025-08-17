@@ -87,7 +87,7 @@ const name = process.argv[3] || "Admin User";  // Default to "Admin User"
 
 if (!email) {
     console.log("Usage: node scripts/makeAdmin.mjs <email>");
-    console.log("Example: node scripts/makeAdmin.mjs yaphanyang09@gmail.com");
+    console.log('Example: node scripts/makeAdmin.mjs yaphanyang09@gmail.com "Yap Han Yang"');
     process.exit(1);
 }
 
