@@ -22,13 +22,6 @@ function hideMsg() {
 
 function renderStatsTable(eventLabel, stats, eventId) {
   const hasGroup = ['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId);
-  const fmtDiff = (v) => {
-    if(v === 'NA') return v;
-    if(v === undefined || v === null) return 'NA';
-    const n = Number(v);
-    if(isNaN(n)) return v;
-    return n>0 ? `+${n}` : `${n}`;
-  };
   return `
     <div class="overflow-x-auto flex justify-center">
   <table class="min-w-full w-full table-auto whitespace-nowrap text-sm md:text-base mx-auto">
@@ -50,7 +43,7 @@ function renderStatsTable(eventLabel, stats, eventId) {
     <td class="text-center px-4 py-3">${stats.losses}</td>
     <td class="text-center px-4 py-3">${stats.pointsFor ?? 'NA'}</td>
     <td class="text-center px-4 py-3">${stats.pointsAgainst ?? 'NA'}</td>
-  <td class="text-center px-4 py-3">${fmtDiff(stats.pointsDiff ?? 'NA')}</td>
+    <td class="text-center px-4 py-3">${stats.pointsDiff ?? 'NA'}</td>
     ${hasGroup ? `<td class="text-center px-4 py-3">${stats.groupPlacing ?? 'NA'}</td>` : ''}
           </tr>
         </tbody>
