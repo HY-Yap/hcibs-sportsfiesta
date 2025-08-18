@@ -59,7 +59,7 @@
 
 - **Matches CSV Import (ALL events in one file)**
 
-  - Headers: `id,event_id,match_type,venue,scheduled_at,pool,competitor_a,competitor_b`
+  - Headers: `id,event_id,match_type,venue,scheduled_at,pool,competitor_a,competitor_b,scorekeeper_email`
   - Uses ISO times in UTC, e.g. `2025-08-23T09:05:00Z`.
   - Allowed `match_type`: `qualifier | redemption | qf | semi | final | bronze | bonus`.
   - Option **Replace existing matches for affected events** will delete & recreate those matches.
@@ -85,7 +85,7 @@
 Required columns:
 
 ```
-id,event_id,match_type,venue,scheduled_at,pool,competitor_a,competitor_b
+id,event_id,match_type,venue,scheduled_at,pool,competitor_a,competitor_b,scorekeeper_email
 ```
 
 Notes:
@@ -115,6 +115,20 @@ event_id,team_name,member_emails
   - If `roster_min` is missing, the UI currently assumes `roster_min = roster_max`.
 
 ---
+
+## Scorekeeper Details
+
+- **Editing Matches**
+
+  - Unlike admins, scorekeepers can only edit matches allocated to them
+  - Hence, except for those editing the website, everyone else helping should be using scorekeeper
+
+- **How To Allocate Scorekeepers**
+
+  1. Create a **Scorekeeprs CSV** containg the following: `full_name,email`
+  2. Put the following command: `node seedScorekeepers.mjs --csv scorekeepers.csv` (Put `--invite` at the end to generate passwords as well)
+  3. According to the credentials file, insert the scorekeepers' email at the end of the **Matches CSV** file, you may choose to put an admin email if you wish
+  4. Uploaod the **Matches CSV** file as normal, and the scorekeepers are successfully allocated to their matches
 
 ## Cloud Functions you might need to touch
 
@@ -212,6 +226,7 @@ node scripts/finish-quals.mjs badminton_doubles badminton_singles
 
 - **Pre‑event**
 
+  - Create Scorekeepers
   - Import Matches (once).
   - Import Players & Teams; confirm slotting proposal looks right.
   - Sanity‑check times on `/schedule` and placeholders on elim matches.
@@ -267,5 +282,5 @@ A: Yes. Team docs are namespaced (`{event_id}__{slot}`), so `A1` in two sports i
 - Create admins/scorekeepers (`makeAdmin.mjs` or Firebase Console) and sanity‑check permissions.
 - Do a dry end‑to‑end rehearsal: mark a qualifier `live → final`, verify bracket reveal and Awards auto‑fill.
 
-*Last updated: 2025‑08‑15 — website‑only import workflow.*
+*Last updated: 2025‑08‑18 — website‑only import workflow.*
 
