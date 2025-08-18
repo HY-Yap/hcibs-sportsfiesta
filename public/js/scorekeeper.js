@@ -66,6 +66,41 @@ const err = (t) => {
     msg.classList.remove("hidden");
 };
 
+// Placeholder -> team name
+let teamNameCache = new Map();
+
+async function resolveTeamName(eventId, teamId) {
+    if (!teamId) return "TBD";
+
+    // Check cache first
+    const cacheKey = `${eventId}__${teamId}`;
+    if (teamNameCache.has(cacheKey)) {
+        return teamNameCache.get(cacheKey);
+    }
+
+    try {
+        // Try to find team document
+        const teamDocId = `${eventId}__${teamId}`;
+        const teamSnap = await getDocs(
+            query(collection(db, "teams"), where("__name__", "==", teamDocId))
+        );
+
+        if (!teamSnap.empty) {
+            const teamData = teamSnap.docs[0].data();
+            const displayName = teamData.name || teamId;
+            teamNameCache.set(cacheKey, displayName);
+            return displayName;
+        }
+
+        // If no team document found, return the ID (for pool teams like A1, B2)
+        teamNameCache.set(cacheKey, teamId);
+        return teamId;
+    } catch (error) {
+        console.warn(`Could not resolve team name for ${teamId}:`, error);
+        return teamId;
+    }
+}
+
 /* ───── per-event default durations (seconds) ─────
    Requirements:
    - basketball: 8 mins (qualifiers), 15 mins (quarterfinals/semifinals/finals)
@@ -77,7 +112,12 @@ function defaultDurationSeconds(match) {
     const type = match.match_type;
     // Basketball 3v3: 15 min for knockout stages, 8 min for qualifiers
     if (eventId === "basketball3v3") {
-        if (type === "bronze" || type === "qf" || type === "semi" || type === "final") {
+        if (
+            type === "bronze" ||
+            type === "qf" ||
+            type === "semi" ||
+            type === "final"
+        ) {
             return 15 * 60;
         }
         return 8 * 60;
@@ -453,19 +493,30 @@ async function refreshMatchDropdown(eventId) {
                 load.disabled = true;
                 return;
             }
-            sortedMatches.forEach((match) => {
-                const statusIcon = getMatchStatus(match);
-                const teamA = match.competitor_a?.id || "TBD";
-                const teamB = match.competitor_b?.id || "TBD";
-                const full = `${statusIcon} ${match.id} – ${fmt(
-                    match.scheduled_at
-                )} – ${match.venue} (${teamA} vs ${teamB})`;
-                const label = truncateForMobile(full);
-                sel.insertAdjacentHTML(
-                    "beforeend",
-                    `<option value="${match.id}">${label}</option>`
-                );
-            });
+            const matchOptions = await Promise.all(
+                sortedMatches.map(async (match) => {
+                    const statusIcon = getMatchStatus(match);
+
+                    // Resolve team names
+                    const teamAName = await resolveTeamName(
+                        match.event_id,
+                        match.competitor_a?.id
+                    );
+                    const teamBName = await resolveTeamName(
+                        match.event_id,
+                        match.competitor_b?.id
+                    );
+
+                    const full = `${statusIcon} ${match.id} – ${fmt(
+                        match.scheduled_at
+                    )} – ${match.venue} (${teamAName} vs ${teamBName})`;
+                    const label = truncateForMobile(full);
+
+                    return `<option value="${match.id}">${label}</option>`;
+                })
+            );
+
+            sel.innerHTML = matchOptions.join("");
             // Restore selection if still available
             if (
                 currentSelection &&
@@ -545,8 +596,13 @@ async function loadMatch(id, silent = false) {
 
     const m = d.data();
     usedOvertime = false; // reset per match
-    origRed = m.competitor_a.id;
-    origBlue = m.competitor_b.id;
+
+    const teamAName = await resolveTeamName(m.event_id, m.competitor_a.id);
+    const teamBName = await resolveTeamName(m.event_id, m.competitor_b.id);
+
+    origRed = teamAName;
+    origBlue = teamBName;
+
     flipped = false; // 🔥 RESET flip state for new match
 
     // 🔥 FIX: Reset all score button handlers for new match
