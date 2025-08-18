@@ -40,7 +40,7 @@
 5. **Link to your Firebase project**
    ```bash
    firebase use --add
-   # choose the correct project and give it an alias, e.g. "prod"
+   # choose the correct project and give it an alias
    ```
 6. *(Optional — for running scripts)* **Service Account key**
    - In Firebase console ➜ Project settings ➜ **Service accounts** ➜ **Generate new private key**.
@@ -97,7 +97,7 @@ Notes:
 ### Players (`players.csv`)
 
 ```
-full_name,email,phone,accommodation,meals,is_guest
+full_name,email
 ```
 
 - Emails must be unique.
@@ -165,16 +165,16 @@ Also update `defaultParticipantsFor()` in `/public/js/admin-csv.js` if your elim
 Create (if needed) and mark a user as admin via custom claims; also ensures a Firestore `users/{uid}` doc exists.
 
 ```bash
-node scripts/makeAdmin.mjs <email>
+node scripts/makeAdmin.mjs <email> [Name]
 # example
-node scripts/makeAdmin.mjs yaphanyang09@gmail.com
+node scripts/makeAdmin.mjs yaphanyang09@gmail.com "Yap Han Yang"
 ```
 
 *Notes:* If the Auth user doesn’t exist, the script creates one with a temporary password `TempPassword123!` — change it immediately.
 
 ---
 
-### 2) `seedUsersFromCsv.mjs`
+### 2) `seedUsers.mjs`
 
 Create/update players from CSVs and attach them to team docs (fills `member_uids`).
 
