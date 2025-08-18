@@ -126,9 +126,11 @@ event_id,team_name,member_emails
 - **How To Allocate Scorekeepers**
 
   1. Create a **Scorekeeprs CSV** containg the following: `full_name,email`
-  2. Put the following command: `node seedScorekeepers.mjs --csv scorekeepers.csv` (Put `--invite` at the end to generate passwords as well)
+  2. Insert the following command into terminal: `node seedScorekeepers.mjs --csv scorekeepers.csv` (Put `--invite` at the end to generate passwords as well)
   3. According to the credentials file, insert the scorekeepers' email at the end of the **Matches CSV** file, you may choose to put an admin email if you wish
-  4. Uploaod the **Matches CSV** file as normal, and the scorekeepers are successfully allocated to their matches
+  4. Uploaod the **Matches CSV** file as normal, and the scorekeepers will be allocated to the matches
+
+---
 
 ## Cloud Functions you might need to touch
 
