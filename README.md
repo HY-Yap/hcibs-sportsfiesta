@@ -121,7 +121,7 @@ event_id,team_name,member_emails
 - **Editing Matches**
 
   - Unlike admins, scorekeepers can only edit matches allocated to them
-  - Hence, except for those editing the website, everyone else helping should be using scorekeeper
+  - Hence, except for those editing the website, everyone else helping should be using scorekeeper emails
 
 - **How To Allocate Scorekeepers**
 
