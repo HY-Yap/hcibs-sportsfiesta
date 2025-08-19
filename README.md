@@ -41,7 +41,22 @@ cd hcibs-sportsfiesta # or whatever your folder name is
 firebase use --add   # pick your project and name the alias e.g. "prod"
 ```
 
-> Deployment note: the website uses CDN scripts and doesn’t require a build step. Deploys are via `firebase deploy` (if you need to publish changes).
+### 1.1 Deployment note
+> The website uses CDN scripts and doesn’t require a build step. 
+
+Deploys are via `firebase deploy` if you need to publish changes. Useful flags (attach at the end of the command):
+
+-   `--only hosting` - Deploy only the hosting content (i.e. HTML/CSS/JS) and configuration of the firebase project
+-   `--only firestore:rules` - Deploy only the Cloud Firestore Security Rules
+-   `--only functions` - Deploy only the Cloud Functions
+-   `--only functions:<function>` - Depoly only the selected Cloud Function
+
+Example usage (multiple flags are comma-separated):
+```bash
+firebase deploy --only hosting,functions:autoFillAwards
+```
+
+> Note: Cloud Functions take a longer time to deploy. To minimise deployment time, only select them when changes have been made. When only HTML/CSS/JS have been edited, choose `--only hosting`.
 
 ---
 
@@ -63,7 +78,8 @@ firebase use --add   # pick your project and name the alias e.g. "prod"
     > After editing `functions/index.js`:
     >
     > ```bash
-    > cd functions
+    > firebase deploy --only functions
+    > # if it is your first time, you may be prompted to cd functions and install some packages, do proceed
     > ```
 
     -   Also update `defaultParticipantsFor()` in `/public/js/admin-csv.js` if your elim placeholders (e.g., `BW1`, `FSF1W`) change naming.
@@ -131,7 +147,7 @@ Run from the repo root:
 
 ```bash
 # Create/ensure users for everyone in your CSVs
-# Save the CSVs as data/players.csv and data/teams.csv
+# Requirement: save the CSVs as data/players.csv and data/teams.csv
 # (uses scripts/serviceAccountKey.json)
 node scripts/seedUsers.mjs --players ./data/players.csv --teams ./data/teams.csv --invite
 ```
