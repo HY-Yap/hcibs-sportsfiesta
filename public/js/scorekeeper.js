@@ -446,16 +446,35 @@ async function refreshMatchDropdown(eventId) {
             const visibleMatches = allMatches.filter((match) => {
                 // Scorekeeper: only show matches they are assigned to
                 if (role === "scorekeeper") {
-                    // Match may store email in scorekeeper and uid in scorekeeper_uid
-                    if (!match.scorekeeper && !match.scorekeeper_uid)
+                    if (!user) return false;
+
+                    // NEW: accept assignment via scorekeeper_email (plus legacy fields)
+                    const userEmail = user.email ? user.email.toLowerCase() : null;
+                    const matchEmail = match.scorekeeper_email
+                        ? String(match.scorekeeper_email).toLowerCase()
+                        : null;
+                    const legacyEmail =
+                        typeof match.scorekeeper === "string" &&
+                        match.scorekeeper.includes("@")
+                            ? match.scorekeeper.toLowerCase()
+                            : null;
+
+                    const emailMatch =
+                        (!!matchEmail && !!userEmail && matchEmail === userEmail) ||
+                        (!!legacyEmail && !!userEmail && legacyEmail === userEmail);
+
+                    const uidMatch =
+                        match.scorekeeper_uid === user.uid || match.scorekeeper === user.uid;
+
+                    // If no assignment fields exist, hide
+                    if (
+                        !match.scorekeeper_email &&
+                        !match.scorekeeper &&
+                        !match.scorekeeper_uid
+                    )
                         return false;
-                    if (user) {
-                        const emailMatch = match.scorekeeper === user.email;
-                        const uidMatch =
-                            match.scorekeeper === user.uid ||
-                            match.scorekeeper_uid === user.uid;
-                        if (!emailMatch && !uidMatch) return false;
-                    } else return false;
+
+                    if (!emailMatch && !uidMatch) return false;
                 }
                 // Basic visibility check
                 if (!shouldShowMatch(match, allMatches)) return false;
@@ -626,10 +645,23 @@ async function loadMatch(id, silent = false) {
         role = token.claims.role || "scorekeeper";
     }
     if (role === "scorekeeper") {
-        // Only allow editing if scorekeeper assigned (email or uid)
-        const emailMatch = m.scorekeeper === user.email;
+        // NEW: accept assignment via scorekeeper_email (plus legacy fields)
+        const userEmail = user?.email ? user.email.toLowerCase() : null;
+        const matchEmail = m.scorekeeper_email
+            ? String(m.scorekeeper_email).toLowerCase()
+            : null;
+        const legacyEmail =
+            typeof m.scorekeeper === "string" && m.scorekeeper.includes("@")
+                ? m.scorekeeper.toLowerCase()
+                : null;
+
+        const emailMatch =
+            (!!matchEmail && !!userEmail && matchEmail === userEmail) ||
+            (!!legacyEmail && !!userEmail && legacyEmail === userEmail);
+
         const uidMatch =
-            m.scorekeeper === user.uid || m.scorekeeper_uid === user.uid;
+            m.scorekeeper_uid === user.uid || m.scorekeeper === user.uid;
+
         const assigned = emailMatch || uidMatch;
         if (!assigned) canEdit = false;
     }
