@@ -509,10 +509,10 @@ function isPlaceholder(teamId, match) {
 function depsSatisfied(match, all) {
     const statusOf = (id) => all.find((m) => m.id === id)?.status;
 
-    // ── Basketball ──
+    // ── Basketball ── (2 groups A/B, top 2 from each go to semis)
     if (match.event_id === "basketball3v3") {
-        // QF matches need all qualifiers to be final
-        if (/^B-QF[1-4]$/.test(match.id)) {
+        // Semis need all qualifiers to be final
+        if (/^B-SF[12]$/.test(match.id)) {
             return all
                 .filter(
                     (m) =>
@@ -522,22 +522,30 @@ function depsSatisfied(match, all) {
                 .every((m) => m.status === "final");
         }
 
-        if (match.id === "B-SF1")
-            return ["B-QF1", "B-QF2"].every((x) => statusOf(x) === "final");
-        if (match.id === "B-SF2")
-            return ["B-QF3", "B-QF4"].every((x) => statusOf(x) === "final");
         if (/^B-(F1|B1)$/.test(match.id))
             return ["B-SF1", "B-SF2"].every((x) => statusOf(x) === "final");
     }
 
-    // ── Badminton BO3 ──
+    // ── Badminton BO3 ── (2 groups A/B, top 2 from each go to semis)
     if (/^[SD]-(F|B)[23]$/.test(match.id)) {
         const opener = match.id.replace(/[23]$/, "1");
         const st = statusOf(opener);
         return st === "live" || st === "final";
     }
 
-    // ── Frisbee ── (Fixed dependency logic)
+    // ── Badminton Semis ── (need all qualifiers done)
+    if (/^[SD]-SF\d+-\d$/.test(match.id)) {
+        const eventId = match.event_id;
+        return all
+            .filter(
+                (m) =>
+                    m.event_id === eventId &&
+                    m.match_type === "qualifier"
+            )
+            .every((m) => m.status === "final");
+    }
+
+    // ── Frisbee ── (1 group of 7, single round robin, top 4 advance)
     if (match.event_id === "frisbee5v5") {
         const qualsDone = all
             .filter(
@@ -546,27 +554,8 @@ function depsSatisfied(match, all) {
             )
             .every((m) => m.status === "final");
 
-        // Redemption (only after all qualifiers done)
-        if (/^F-R[12]$/.test(match.id)) return qualsDone;
-
-        // QF1/QF2: show only after BOTH redemption matches are FINAL
-        if (/^F-QF[12]$/.test(match.id)) {
-            return statusOf("F-R1") === "final" && statusOf("F-R2") === "final";
-        }
-
-        // 🔥 QF3/QF4: only check if redemption is done, NOT team confirmation here
-        if (match.id === "F-QF3") return statusOf("F-R1") === "final";
-        if (match.id === "F-QF4") return statusOf("F-R2") === "final";
-
-        // SFs wait for their QFs
-        if (match.id === "F-SF1")
-            return ["F-QF1", "F-QF3"].every((x) => statusOf(x) === "final");
-        if (match.id === "F-SF2")
-            return ["F-QF2", "F-QF4"].every((x) => statusOf(x) === "final");
-
-        // Bronze/Final wait for both SFs
-        if (/^F-(?:F1|B1)$/.test(match.id))
-            return ["F-SF1", "F-SF2"].every((x) => statusOf(x) === "final");
+        // Bronze/Final need all qualifiers done (direct from round robin standings)
+        if (/^F-(?:F1|B1)$/.test(match.id)) return qualsDone;
 
         // Bonus waits for Final
         if (match.id === "F-BON1") return statusOf("F-F1") === "final";
@@ -586,25 +575,33 @@ function shouldShowMatch(match, allMatches) {
         !isPlaceholder(competitor_a?.id, match) &&
         !isPlaceholder(competitor_b?.id, match);
     const hasStarted = status === "live" || status === "final";
+    const isScheduled = status === "scheduled";
 
-    // Allow Basketball elims (QF/SF/B/F) to show once deps are met,
-    // even if names are still BW1..BW8, BQF1W etc.
+    // Show matches immediately when they have real competitor IDs and are scheduled
+    if (bothConfirmed && isScheduled) return true;
+
+    // For badminton semifinals: show when competitors are confirmed and scheduled
+    if (/^[SD]-SF\d+-\d$/.test(match.id)) {
+        return bothConfirmed && (isScheduled || hasStarted);
+    }
+
+    // For badminton finals/bronze: show when competitors are confirmed and scheduled  
+    if (/^[SD]-[FB]\d$/.test(match.id)) {
+        return bothConfirmed && (isScheduled || hasStarted);
+    }
+
+    // For basketball elimination matches: show when competitors are confirmed and scheduled
     if (match.event_id === "basketball3v3" && match_type !== "qualifier") {
-        return true; // depsSatisfied already enforced above
+        return bothConfirmed && (isScheduled || hasStarted);
     }
 
-    // Allow Frisbee elims (R/QF/SF/F/BON) to show once deps are met,
-    // even if names are still A1/B2 etc.
+    // For frisbee elimination matches: show when competitors are confirmed and scheduled
     if (match.event_id === "frisbee5v5" && match_type !== "qualifier") {
-        return hasStarted || bothConfirmed || true; // depsSatisfied already true
-    }
-
-    // For Frisbee QF3/QF4: require BOTH dependency AND confirmed teams
-    if (match.event_id === "frisbee5v5" && /^F-QF[34]$/.test(match.id)) {
-        const bothConfirmed =
-            !isPlaceholder(competitor_a?.id, match) &&
-            !isPlaceholder(competitor_b?.id, match);
-        return bothConfirmed;
+        // Special case for QF3/QF4: require BOTH dependency AND confirmed teams
+        if (/^F-QF[34]$/.test(match.id)) {
+            return bothConfirmed;
+        }
+        return bothConfirmed && (isScheduled || hasStarted);
     }
 
     return bothConfirmed || hasStarted;

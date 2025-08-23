@@ -103,7 +103,7 @@ async function resolveTeamName(eventId, teamId) {
 
 /* ───── per-event default durations (seconds) ─────
    Requirements:
-   - basketball: 8 mins (qualifiers), 15 mins (quarterfinals/semifinals/finals)
+   - basketball: 8 mins (qualifiers), 15 mins (semifinals/finals)
    - badminton: 10 mins (qualifiers/elims/bronze), 15 mins each final game (F1/F2/F3)
    - frisbee: 10 mins standard, 20 mins final (F-F1)
 */
@@ -114,7 +114,6 @@ function defaultDurationSeconds(match) {
     if (eventId === "basketball3v3") {
         if (
             type === "bronze" ||
-            type === "qf" ||
             type === "semi" ||
             type === "final"
         ) {
@@ -181,56 +180,15 @@ function isPlaceholder(teamId, match) {
 function depsSatisfied(match, all) {
     const statusOf = (id) => all.find((m) => m.id === id)?.status;
 
-    // ── Basketball (single-game) ──
+    // ── Basketball ── (2 groups A/B, top 2 from each go to semis)
     if (match.event_id === "basketball3v3") {
-        // Allow QFs as soon as all qualifiers are final (even if BW* still present)
-        if (match.match_type === "qf") {
+        // Semis need all qualifiers to be final
+        if (/^B-SF[12]$/.test(match.id)) {
             return allQualsFinal("basketball3v3", all);
-        }
-        if (match.id === "B-SF1") {
-            return ["B-QF1", "B-QF2"].every((x) => statusOf(x) === "final");
-        }
-        if (match.id === "B-SF2") {
-            return ["B-QF3", "B-QF4"].every((x) => statusOf(x) === "final");
         }
         if (/^B-(F1|B1)$/.test(match.id)) {
             return ["B-SF1", "B-SF2"].every((x) => statusOf(x) === "final");
         }
-    }
-
-    // ── Frisbee ── (Fixed dependency logic)
-    if (match.event_id === "frisbee5v5") {
-        const qualsDone = all
-            .filter(
-                (m) =>
-                    m.event_id === "frisbee5v5" && m.match_type === "qualifier"
-            )
-            .every((m) => m.status === "final");
-
-        // Redemption (only after all qualifiers done)
-        if (/^F-R[12]$/.test(match.id)) return qualsDone;
-
-        // QF1/QF2: show only after BOTH redemption matches are FINAL
-        if (/^F-QF[12]$/.test(match.id)) {
-            return statusOf("F-R1") === "final" && statusOf("F-R2") === "final";
-        }
-
-        // 🔥 QF3/QF4: only check if redemption is done, NOT team confirmation here
-        if (match.id === "F-QF3") return statusOf("F-R1") === "final";
-        if (match.id === "F-QF4") return statusOf("F-R2") === "final";
-
-        // SFs wait for their QFs
-        if (match.id === "F-SF1")
-            return ["F-QF1", "F-QF3"].every((x) => statusOf(x) === "final");
-        if (match.id === "F-SF2")
-            return ["F-QF2", "F-QF4"].every((x) => statusOf(x) === "final");
-
-        // Bronze/Final wait for both SFs
-        if (/^F-(?:F1|B1)$/.test(match.id))
-            return ["F-SF1", "F-SF2"].every((x) => statusOf(x) === "final");
-
-        // Bonus waits for Final
-        if (match.id === "F-BON1") return statusOf("F-F1") === "final";
     }
 
     // ── Badminton BO3: only show F2/F3 or B2/B3 after game 1 has started ──
@@ -245,6 +203,28 @@ function depsSatisfied(match, all) {
         const opener = match.id.replace(/-[23]$/, "-1");
         const st = statusOf(opener);
         return st === "live" || st === "final";
+    }
+
+    // ── Badminton Semis ── (need all qualifiers done)
+    if (/^[SD]-SF\d+-\d$/.test(match.id)) {
+        const eventId = match.event_id;
+        return allQualsFinal(eventId, all);
+    }
+
+    // ── Frisbee ── (1 group of 7, single round robin, top 4 advance)
+    if (match.event_id === "frisbee5v5") {
+        const qualsDone = all
+            .filter(
+                (m) =>
+                    m.event_id === "frisbee5v5" && m.match_type === "qualifier"
+            )
+            .every((m) => m.status === "final");
+
+        // Bronze/Final need all qualifiers done (direct from round robin standings)
+        if (/^F-(?:F1|B1)$/.test(match.id)) return qualsDone;
+
+        // Bonus waits for Final
+        if (match.id === "F-BON1") return statusOf("F-F1") === "final";
     }
 
     return true;
