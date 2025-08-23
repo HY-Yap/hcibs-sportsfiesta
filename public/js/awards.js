@@ -27,6 +27,26 @@ const pretty = (id) =>
         .replace("3v3", " 3v3");
 
 const teamCache = new Map();
+const emailToName = {}; // email -> full name mapping
+
+// Load user profiles for full names (run once at startup)
+async function loadUserNames() {
+    try {
+        const usersSnap = await getDocs(collection(db, "users"));
+        usersSnap.forEach((uDoc) => {
+            const u = uDoc.data() || {};
+            const email = (u.email || u.userEmail || "").toLowerCase();
+            if (!email) return;
+            emailToName[email] =
+                u.full_name || u.name || u.displayName || email.split("@")[0];
+        });
+    } catch (userErr) {
+        console.warn(
+            "Could not load users collection for full names, falling back to email prefixes:",
+            userErr
+        );
+    }
+}
 
 // Helper function for event-scoped team name resolution
 async function resolveTeamName(eventId, competitorId) {
@@ -80,8 +100,10 @@ async function resolveTeamName(eventId, competitorId) {
 async function formatRoster(roster) {
     if (!roster || roster.length === 0) return "";
 
-    // Extract names from emails (same logic as athletes.js)
+    // Use full names from users map when available, fallback to email prefix
     const names = roster.map((email) => {
+        const key = (email || "").toLowerCase();
+        if (emailToName[key]) return emailToName[key];
         const username = email.split("@")[0];
         return username.charAt(0).toUpperCase() + username.slice(1);
     });
@@ -161,6 +183,9 @@ async function renderEvent(eventId, awardData) {
 }
 
 /* -------- initialise sections & live listeners ------------------------ */
+
+// Load user names before rendering anything
+await loadUserNames();
 
 const evSnap = await getDocs(collection(db, "events"));
 const evIds = evSnap.docs.map((d) => d.id).sort();
