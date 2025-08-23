@@ -123,16 +123,26 @@ function shell(rowsHtml) {
 }
 
 /* ---------- ranking helpers (mirrors mystats) ---------- */
-function ordinal(n){
-    if(typeof n !== 'number') return n;
-    const v = n % 100; if(v>=11 && v<=13) return n + 'th';
-    switch(n % 10){case 1: return n+'st'; case 2: return n+'nd'; case 3: return n+'rd'; default: return n+'th';}
+function ordinal(n) {
+    if (typeof n !== "number") return n;
+    const v = n % 100;
+    if (v >= 11 && v <= 13) return n + "th";
+    switch (n % 10) {
+        case 1:
+            return n + "st";
+        case 2:
+            return n + "nd";
+        case 3:
+            return n + "rd";
+        default:
+            return n + "th";
+    }
 }
 
-function rankingTable(eventId, data){
+function rankingTable(eventId, data) {
     // Ensure responsive CSS for widening first (Team) column on small screens is injected once
-    if(!window.__rankingWidenCSS){
-        const style = document.createElement('style');
+    if (!window.__rankingWidenCSS) {
+        const style = document.createElement("style");
         style.textContent = `@media (max-width: 640px){
             table.ranking-table th:first-child, 
             table.ranking-table td:first-child { min-width: 14rem; }
@@ -140,59 +150,141 @@ function rankingTable(eventId, data){
         document.head.appendChild(style);
         window.__rankingWidenCSS = true;
     }
-    const hasGroup = ['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId);
+    const hasGroup = [
+        "basketball3v3",
+        "frisbee5v5",
+        "badminton_singles",
+        "badminton_doubles",
+    ].includes(eventId);
     // Column setup: insert separate Group column when grouped events
     const cols = hasGroup
-        ? ["Team","Group","Matches Played","Wins","Losses","Points For","Points Against","Points Diff","Group Rank"]
-        : ["Team","Matches Played","Wins","Losses","Points For","Points Against","Points Diff"]; 
-    const header = cols.map((c,i)=>{
-        let extra = '';
-        if(c === 'Team') extra = ' w-72 md:w-65';
-        else if(c === 'Group') extra = ' w-14';
-        else extra = ' whitespace-nowrap';
-        return `<th class="px-3 py-2 text-center${extra}">${c}</th>`;
-    }).join('');
+        ? [
+              "Team",
+              "Group",
+              "Matches Played",
+              "Wins",
+              "Losses",
+              "Points For",
+              "Points Against",
+              "Points Diff",
+              "Group Rank",
+          ]
+        : [
+              "Team",
+              "Matches Played",
+              "Wins",
+              "Losses",
+              "Points For",
+              "Points Against",
+              "Points Diff",
+          ];
+    const header = cols
+        .map((c, i) => {
+            let extra = "";
+            if (c === "Team") extra = " w-72 md:w-65";
+            else if (c === "Group") extra = " w-14";
+            else extra = " whitespace-nowrap";
+            return `<th class="px-3 py-2 text-center${extra}">${c}</th>`;
+        })
+        .join("");
 
     // Determine unique pools present and assign colors
-    const pools = Array.from(new Set(data.filter(d=>d.pool).map(d=>d.pool))).sort();
+    const pools = Array.from(
+        new Set(data.filter((d) => d.pool).map((d) => d.pool))
+    ).sort();
     const colorPalette = [
-        'bg-blue-50','bg-green-50','bg-purple-50','bg-amber-50','bg-pink-50','bg-teal-50','bg-orange-50','bg-lime-50'
+        "bg-blue-50",
+        "bg-green-50",
+        "bg-purple-50",
+        "bg-amber-50",
+        "bg-pink-50",
+        "bg-teal-50",
+        "bg-orange-50",
+        "bg-lime-50",
     ];
     const tagColorPalette = [
-        'bg-blue-200 text-blue-800','bg-green-200 text-green-800','bg-purple-200 text-purple-800','bg-amber-200 text-amber-800',
-        'bg-pink-200 text-pink-800','bg-teal-200 text-teal-800','bg-orange-200 text-orange-800','bg-lime-200 text-lime-800'
+        "bg-blue-200 text-blue-800",
+        "bg-green-200 text-green-800",
+        "bg-purple-200 text-purple-800",
+        "bg-amber-200 text-amber-800",
+        "bg-pink-200 text-pink-800",
+        "bg-teal-200 text-teal-800",
+        "bg-orange-200 text-orange-800",
+        "bg-lime-200 text-lime-800",
     ];
-    const poolColor = p => {
+    const poolColor = (p) => {
         const idx = pools.indexOf(p);
-        return idx === -1 ? '' : colorPalette[idx % colorPalette.length];
+        return idx === -1 ? "" : colorPalette[idx % colorPalette.length];
     };
-    const poolTagColor = p => {
+    const poolTagColor = (p) => {
         const idx = pools.indexOf(p);
-        return idx === -1 ? 'bg-gray-200 text-gray-800' : tagColorPalette[idx % tagColorPalette.length];
+        return idx === -1
+            ? "bg-gray-200 text-gray-800"
+            : tagColorPalette[idx % tagColorPalette.length];
     };
 
     // Sort by pool (if any) then by groupPlace (if available) else overall place
-    const sorted = data.slice().sort((a,b)=>{
-        if(hasGroup){
-            if(a.pool && b.pool && a.pool !== b.pool) return a.pool.localeCompare(b.pool);
-            if(a.pool && !b.pool) return -1; if(!a.pool && b.pool) return 1;
-            if(a.groupPlace && b.groupPlace && a.groupPlace !== b.groupPlace) return a.groupPlace - b.groupPlace;
+    const sorted = data.slice().sort((a, b) => {
+        if (hasGroup) {
+            if (a.pool && b.pool && a.pool !== b.pool)
+                return a.pool.localeCompare(b.pool);
+            if (a.pool && !b.pool) return -1;
+            if (!a.pool && b.pool) return 1;
+            if (a.groupPlace && b.groupPlace && a.groupPlace !== b.groupPlace)
+                return a.groupPlace - b.groupPlace;
         }
         return a.place - b.place;
     });
 
-    const rows = sorted.map(r=>`<tr class="${r.pool?poolColor(r.pool):'even:bg-gray-50'}">
-        <td class="px-3 py-2 font-medium text-center align-middle whitespace-normal md:whitespace-nowrap w-72 md:w-72 break-words">${r.name || r.id}</td>
-        ${hasGroup ? `<td class="px-3 py-2 text-center">${r.pool ? `<span class=\"text-xs ${poolTagColor(r.pool)} px-1 py-0.5 rounded font-semibold\">(${r.pool})</span>` : ''}</td>` : ''}
+    const rows =
+        sorted
+            .map(
+                (r) => `<tr class="${
+                    r.pool ? poolColor(r.pool) : "even:bg-gray-50"
+                }">
+        <td class="px-3 py-2 font-medium text-center align-middle whitespace-normal md:whitespace-nowrap w-72 md:w-72 break-words">${
+            r.name || r.id
+        }</td>
+        ${
+            hasGroup
+                ? `<td class="px-3 py-2 text-center">${
+                      r.pool
+                          ? `<span class=\"text-xs ${poolTagColor(
+                                r.pool
+                            )} px-1 py-0.5 rounded font-semibold\">(${
+                                r.pool
+                            })</span>`
+                          : ""
+                  }</td>`
+                : ""
+        }
         <td class="px-3 py-2 text-center">${r.played}</td>
         <td class="px-3 py-2 text-center">${r.wins}</td>
         <td class="px-3 py-2 text-center">${r.losses}</td>
         <td class="px-3 py-2 text-center">${r.pointsFor || 0}</td>
         <td class="px-3 py-2 text-center">${r.pointsAgainst || 0}</td>
         <td class="px-3 py-2 text-center">${r.pointsDiff || 0}</td>
-        ${hasGroup ? `<td class="px-3 py-2 text-center">${r.groupPlace ? ordinal(r.groupPlace) : '—'}</td>` : ''}
-    </tr>`).join('') || `<tr><td colspan="${cols.length}" class="p-4 text-center text-gray-500">No data yet.</td></tr>`;
-    const legend = pools.length ? `<div class="flex flex-wrap gap-2 text-xs mt-2">${pools.map((p,i)=>`<span class="px-2 py-1 rounded ${colorPalette[i % colorPalette.length]}">Group ${p}</span>`).join('')}</div>` : '';
+        ${
+            hasGroup
+                ? `<td class="px-3 py-2 text-center">${
+                      r.groupPlace ? ordinal(r.groupPlace) : "—"
+                  }</td>`
+                : ""
+        }
+    </tr>`
+            )
+            .join("") ||
+        `<tr><td colspan="${cols.length}" class="p-4 text-center text-gray-500">No data yet.</td></tr>`;
+    const legend = pools.length
+        ? `<div class="flex flex-wrap gap-2 text-xs mt-2">${pools
+              .map(
+                  (p, i) =>
+                      `<span class="px-2 py-1 rounded ${
+                          colorPalette[i % colorPalette.length]
+                      }">Group ${p}</span>`
+              )
+              .join("")}</div>`
+        : "";
     return `<div class="overflow-x-auto"><table class="ranking-table min-w-full table-auto text-sm md:text-base whitespace-nowrap">
      <thead class="bg-primary text-white"><tr>${header}</tr></thead>
      <tbody>${rows}</tbody></table>${legend}</div>`;
@@ -200,31 +292,57 @@ function rankingTable(eventId, data){
 
 // Compute rankings including zero‑match teams & all pools.
 // Optionally pass matches array (from listener) to avoid duplicate fetch.
-async function computeRankings(eventId, existingMatches){
+async function computeRankings(eventId, existingMatches) {
     const stats = new Map();
-    const ensure = id => { if(!stats.has(id)) stats.set(id,{ id, played:0, wins:0, losses:0, pointsFor:0, pointsAgainst:0, pointsDiff:0 }); return stats.get(id); };
+    const ensure = (id) => {
+        if (!stats.has(id))
+            stats.set(id, {
+                id,
+                played: 0,
+                wins: 0,
+                losses: 0,
+                pointsFor: 0,
+                pointsAgainst: 0,
+                pointsDiff: 0,
+            });
+        return stats.get(id);
+    };
 
     // Use passed matches or fetch
     let matches = existingMatches;
-    if(!matches){
-        const matchSnap = await getDocs(query(collection(db,'matches'), where('event_id','==', eventId)));
-        matches = matchSnap.docs.map(d=> ({id:d.id, ...d.data()}));
+    if (!matches) {
+        const matchSnap = await getDocs(
+            query(collection(db, "matches"), where("event_id", "==", eventId))
+        );
+        matches = matchSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
     }
 
     // Derive pools & initial team entries from ALL qualifier matches (including scheduled ones).
     // This ensures we see all groups even before matches are played.
-    matches.filter(m=> m.match_type==='qualifier' && m.pool).forEach(m => {
-        const aId = m.competitor_a?.id, bId = m.competitor_b?.id;
-        if(!aId||!bId) return;
-        // Include ALL teams from qualifiers, even if they're currently placeholders
-        const a = ensure(aId), b = ensure(bId);
-        if(!a.pool) a.pool = m.pool; if(!b.pool) b.pool = m.pool;
-    });
+    matches
+        .filter((m) => m.match_type === "qualifier" && m.pool)
+        .forEach((m) => {
+            const aId = m.competitor_a?.id,
+                bId = m.competitor_b?.id;
+            if (!aId || !bId) return;
+            // Include ALL teams from qualifiers, even if they're currently placeholders
+            const a = ensure(aId),
+                b = ensure(bId);
+            if (!a.pool) a.pool = m.pool;
+            if (!b.pool) b.pool = m.pool;
+        });
 
     // Normalize basketball pool ids (allow 1-4, A-D, 'Group A', etc.)
-    if(eventId === 'basketball3v3'){
-        const digitToLetter = { '1':'A','2':'B','3':'C','4':'D' };
-        stats.forEach(rec => { if(rec.pool){ let p = String(rec.pool).toUpperCase(); if(digitToLetter[p]) p=digitToLetter[p]; const m=p.match(/([A-D])$/); if(m) rec.pool=m[1]; } });
+    if (eventId === "basketball3v3") {
+        const digitToLetter = { 1: "A", 2: "B", 3: "C", 4: "D" };
+        stats.forEach((rec) => {
+            if (rec.pool) {
+                let p = String(rec.pool).toUpperCase();
+                if (digitToLetter[p]) p = digitToLetter[p];
+                const m = p.match(/([A-D])$/);
+                if (m) rec.pool = m[1];
+            }
+        });
     }
 
     // Helper: a team is countable only if not a placeholder
@@ -232,82 +350,137 @@ async function computeRankings(eventId, existingMatches){
 
     // Tally only final, non-void matches for win/loss stats
     // Count matches if the current team IDs are real (not placeholders)
-    matches.filter(m=> m.status==='final' && m.status!=='void').forEach(m => {
-        const aId = m.competitor_a?.id, bId = m.competitor_b?.id;
-        if(!aId||!bId) return; 
-        
-        // Count stats for real team IDs even if match originally had placeholders
-        const aIsReal = !isPlaceholder(aId, {event_id: eventId});
-        const bIsReal = !isPlaceholder(bId, {event_id: eventId});
-        
-        if(aIsReal || bIsReal) { // At least one real team
-            const as = m.score_a??0, bs = m.score_b??0;
-            
-            if(aIsReal) {
-                const a = ensure(aId);
-                a.played++;
-                a.pointsFor += as;
-                a.pointsAgainst += bs;
-                a.pointsDiff = a.pointsFor - a.pointsAgainst;
-                if(as>bs) a.wins++; else if(bs>as) a.losses++;
+    matches
+        .filter((m) => m.status === "final" && m.status !== "void")
+        .forEach((m) => {
+            const aId = m.competitor_a?.id,
+                bId = m.competitor_b?.id;
+            if (!aId || !bId) return;
+
+            // Count stats for real team IDs even if match originally had placeholders
+            const aIsReal = !isPlaceholder(aId, { event_id: eventId });
+            const bIsReal = !isPlaceholder(bId, { event_id: eventId });
+
+            if (aIsReal || bIsReal) {
+                // At least one real team
+                const as = m.score_a ?? 0,
+                    bs = m.score_b ?? 0;
+
+                if (aIsReal) {
+                    const a = ensure(aId);
+                    a.played++;
+                    a.pointsFor += as;
+                    a.pointsAgainst += bs;
+                    a.pointsDiff = a.pointsFor - a.pointsAgainst;
+                    if (as > bs) a.wins++;
+                    else if (bs > as) a.losses++;
+                }
+                if (bIsReal) {
+                    const b = ensure(bId);
+                    b.played++;
+                    b.pointsFor += bs;
+                    b.pointsAgainst += as;
+                    b.pointsDiff = b.pointsFor - b.pointsAgainst;
+                    if (bs > as) b.wins++;
+                    else if (as > bs) b.losses++;
+                }
             }
-            if(bIsReal) {
-                const b = ensure(bId);
-                b.played++;
-                b.pointsFor += bs;
-                b.pointsAgainst += as;
-                b.pointsDiff = b.pointsFor - b.pointsAgainst;
-                if(bs>as) b.wins++; else if(as>bs) b.losses++;
-            }
-        }
-    });
-    
+        });
+
     // Filter out placeholder teams from final rankings display
     let list = Array.from(stats.values())
-        .filter(rec => !isPlaceholder(rec.id, {event_id: eventId, match_type: 'qualifier'})) // Remove placeholders from display
-        .sort((x,y)=>{
-        if(y.wins!==x.wins) return y.wins-x.wins; // More wins = better
-        if(y.pointsDiff!==x.pointsDiff) return y.pointsDiff-x.pointsDiff; // Higher points difference = better
-        if(y.played!==x.played) return y.played-x.played;
-        return x.id.localeCompare(y.id);
+        .filter(
+            (rec) =>
+                !isPlaceholder(rec.id, {
+                    event_id: eventId,
+                    match_type: "qualifier",
+                })
+        ) // Remove placeholders from display
+        .sort((x, y) => {
+            if (y.wins !== x.wins) return y.wins - x.wins; // More wins = better
+            if (y.pointsDiff !== x.pointsDiff)
+                return y.pointsDiff - x.pointsDiff; // Higher points difference = better
+            if (y.played !== x.played) return y.played - x.played;
+            return x.id.localeCompare(y.id);
+        });
+    list.forEach((it, i) => {
+        it.place = i + 1;
     });
-    list.forEach((it,i)=>{ it.place = i+1; });
 
     // Pool-specific ordering: compute groupPlace only if any finals in that pool; otherwise leave blank
-    const pools = [...new Set(list.map(r=> r.pool).filter(Boolean))];
-    pools.forEach(pool => {
-    const poolFinals = matches.filter(m=> m.match_type==='qualifier' && m.pool===pool && m.status==='final');
-        if(poolFinals.length===0) return; // no results yet
+    const pools = [...new Set(list.map((r) => r.pool).filter(Boolean))];
+    pools.forEach((pool) => {
+        const poolFinals = matches.filter(
+            (m) =>
+                m.match_type === "qualifier" &&
+                m.pool === pool &&
+                m.status === "final"
+        );
+        if (poolFinals.length === 0) return; // no results yet
         // Build mini table for that pool with points tracking
         const poolStats = new Map();
-        const ensureP = id => { if(!poolStats.has(id)) poolStats.set(id,{id,played:0,wins:0,losses:0,pointsFor:0,pointsAgainst:0,pointsDiff:0}); return poolStats.get(id); };
-    poolFinals.forEach(m=> { 
-        const aId=m.competitor_a?.id, bId=m.competitor_b?.id; 
-        if(!aId||!bId) return; 
-        const aIsReal = !isPlaceholder(aId, {event_id: eventId});
-        const bIsReal = !isPlaceholder(bId, {event_id: eventId});
-        if(!(aIsReal && bIsReal)) return; // Only count if both are real for pool stats
-        
-        const a=ensureP(aId), b=ensureP(bId); 
-        const as=m.score_a??0, bs=m.score_b??0;
-        a.played++; b.played++;
-        a.pointsFor += as; a.pointsAgainst += bs; a.pointsDiff = a.pointsFor - a.pointsAgainst;
-        b.pointsFor += bs; b.pointsAgainst += as; b.pointsDiff = b.pointsFor - b.pointsAgainst;
-        if(as>bs){a.wins++; b.losses++;} else if(bs>as){b.wins++; a.losses++;} 
-    });
-        const ordered = Array.from(poolStats.values()).sort((x,y)=>{ 
-            if(y.wins!==x.wins) return y.wins-x.wins; 
-            if(y.pointsDiff!==x.pointsDiff) return y.pointsDiff-x.pointsDiff; 
-            if(y.played!==x.played) return y.played-x.played; 
-            return x.id.localeCompare(y.id); 
+        const ensureP = (id) => {
+            if (!poolStats.has(id))
+                poolStats.set(id, {
+                    id,
+                    played: 0,
+                    wins: 0,
+                    losses: 0,
+                    pointsFor: 0,
+                    pointsAgainst: 0,
+                    pointsDiff: 0,
+                });
+            return poolStats.get(id);
+        };
+        poolFinals.forEach((m) => {
+            const aId = m.competitor_a?.id,
+                bId = m.competitor_b?.id;
+            if (!aId || !bId) return;
+            const aIsReal = !isPlaceholder(aId, { event_id: eventId });
+            const bIsReal = !isPlaceholder(bId, { event_id: eventId });
+            if (!(aIsReal && bIsReal)) return; // Only count if both are real for pool stats
+
+            const a = ensureP(aId),
+                b = ensureP(bId);
+            const as = m.score_a ?? 0,
+                bs = m.score_b ?? 0;
+            a.played++;
+            b.played++;
+            a.pointsFor += as;
+            a.pointsAgainst += bs;
+            a.pointsDiff = a.pointsFor - a.pointsAgainst;
+            b.pointsFor += bs;
+            b.pointsAgainst += as;
+            b.pointsDiff = b.pointsFor - b.pointsAgainst;
+            if (as > bs) {
+                a.wins++;
+                b.losses++;
+            } else if (bs > as) {
+                b.wins++;
+                a.losses++;
+            }
         });
-        ordered.forEach((rec,i)=> { const overall = list.find(r=> r.id===rec.id); if(overall) overall.groupPlace = i+1; });
+        const ordered = Array.from(poolStats.values()).sort((x, y) => {
+            if (y.wins !== x.wins) return y.wins - x.wins;
+            if (y.pointsDiff !== x.pointsDiff)
+                return y.pointsDiff - x.pointsDiff;
+            if (y.played !== x.played) return y.played - x.played;
+            return x.id.localeCompare(y.id);
+        });
+        ordered.forEach((rec, i) => {
+            const overall = list.find((r) => r.id === rec.id);
+            if (overall) overall.groupPlace = i + 1;
+        });
     });
 
     // Removed basketball override so its groups mirror other sports: groupPlace appears only after results.
 
     // Resolve names
-    await Promise.all(list.map(async rec => { rec.name = await resolveTeamName(eventId, rec.id); }));
+    await Promise.all(
+        list.map(async (rec) => {
+            rec.name = await resolveTeamName(eventId, rec.id);
+        })
+    );
     return list;
 }
 
@@ -324,7 +497,8 @@ function isPlaceholder(teamId, match) {
 
     // (Optional) badminton semi placeholders (S1..S4 / D1..D4)
     // Only treat as placeholders for badminton, NOT basketball
-    if (match?.event_id !== "basketball3v3" && /^(?:S|D)[1-4]$/.test(teamId)) return true;
+    if (match?.event_id !== "basketball3v3" && /^(?:S|D)[1-4]$/.test(teamId))
+        return true;
 
     // Frisbee placeholders used in elims
     if (/^F(?:R[12]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true;
@@ -334,7 +508,16 @@ function isPlaceholder(teamId, match) {
     if (
         match?.event_id === "frisbee5v5" &&
         match?.match_type !== "qualifier" &&
-        /^[ABC][1-4]$/.test(teamId)
+        /^[ABC][1-7]$/.test(teamId)
+    ) {
+        return true;
+    }
+
+    // Add this after the frisbee check (around line 200):
+    if (
+        match?.event_id === "basketball3v3" &&
+        match?.match_type !== "qualifier" &&
+        /^[ABC][1-5]$/.test(teamId) // Handle A1-A5, B1-B5
     ) {
         return true;
     }
@@ -517,7 +700,9 @@ function getMatchPriority(matchId) {
 
 function listen(eventId) {
     container.innerHTML = '<p class="p-4 text-gray-500">Loading…</p>';
-    if(rankingContainer) rankingContainer.innerHTML = '<p class="p-4 text-gray-500">Calculating rankings…</p>';
+    if (rankingContainer)
+        rankingContainer.innerHTML =
+            '<p class="p-4 text-gray-500">Calculating rankings…</p>';
 
     const q = query(
         collection(db, "matches"),
@@ -596,7 +781,7 @@ function listen(eventId) {
         }
 
         container.innerHTML = shell(rows.join(""));
-        if(rankingContainer){
+        if (rankingContainer) {
             const rankings = await computeRankings(eventId, allMatches);
             rankingContainer.innerHTML = rankingTable(eventId, rankings);
         }
