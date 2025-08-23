@@ -503,25 +503,6 @@ function isPlaceholder(teamId, match) {
     // Frisbee placeholders used in elims
     if (/^F(?:R[12]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true;
 
-    // 🔴 IMPORTANT: Only treat A1..C4 as placeholders for frisbee elims,
-    // not for basketball.
-    if (
-        match?.event_id === "frisbee5v5" &&
-        match?.match_type !== "qualifier" &&
-        /^[ABC][1-7]$/.test(teamId)
-    ) {
-        return true;
-    }
-
-    // Add this after the frisbee check (around line 200):
-    if (
-        match?.event_id === "basketball3v3" &&
-        match?.match_type !== "qualifier" &&
-        /^[ABC][1-5]$/.test(teamId) // Handle A1-A5, B1-B5
-    ) {
-        return true;
-    }
-
     return false;
 }
 
