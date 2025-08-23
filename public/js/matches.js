@@ -501,7 +501,7 @@ function isPlaceholder(teamId, match) {
         return true;
 
     // Frisbee placeholders used in elims
-    if (/^F(?:R[12]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true;
+    if (/^F(?:SF[12]W|FW|CHAMP)$/.test(teamId)) return true;
 
     return false;
 }

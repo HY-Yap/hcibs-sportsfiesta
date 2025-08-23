@@ -17,12 +17,39 @@ exports.propagateDelay = functions.firestore
     .onUpdate(async (chg, _) => {
         const before = chg.before.data(),
             after = chg.after.data();
+
+        // 🔍 Add this debug logging
+        console.log(`🔍 propagateDelay triggered for match: ${chg.after.id}`);
+        console.log(`🔍 Status change: ${before.status} → ${after.status}`);
+
+        if (before.status !== "scheduled" || after.status !== "live") {
+            console.log(`🔍 Not a scheduled→live transition, exiting`);
+            return null;
+        }
+
+        // 🔍 Add this check
+        if (!after.actual_start) {
+            console.log(`🔍 No actual_start timestamp found, exiting`);
+            return null;
+        }
+
         if (before.status !== "scheduled" || after.status !== "live")
             return null;
 
         const delay =
             after.actual_start.toMillis() - after.scheduled_at.toMillis();
         if (delay <= 0) return null;
+
+        // 🔍 Add this debug info
+        console.log(
+            `🔍 Delay calculation: ${delay}ms (${delay / 60000} minutes)`
+        );
+        console.log(`🔍 Event: ${after.event_id}, Venue: "${after.venue}"`);
+
+        if (delay <= 0) {
+            console.log(`🔍 No delay (${delay}ms), exiting`);
+            return null;
+        }
 
         const later = await db
             .collection("matches")
@@ -31,7 +58,17 @@ exports.propagateDelay = functions.firestore
             .where("scheduled_at", ">", after.scheduled_at)
             .get();
 
+        // 🔍 Add this debug info
+        console.log(`🔍 Found ${later.size} later matches to shift`);
+        later.forEach((doc) => {
+            const data = doc.data();
+            console.log(
+                `🔍 Will shift: ${doc.id} from ${data.scheduled_at.toDate()}`
+            );
+        });
+
         const batch = db.batch();
+        // ! does not work - comment it out where required
         later.forEach((doc) => {
             const newTS = new admin.firestore.Timestamp(
                 doc.data().scheduled_at.toMillis() / 1000 + delay / 1000,
@@ -39,6 +76,14 @@ exports.propagateDelay = functions.firestore
             );
             batch.update(doc.ref, { scheduled_at: newTS });
         });
+        // * will work if deployed
+        // later.forEach((doc) => {
+        //     const currentTime = doc.data().scheduled_at;
+        //     const newTime = admin.firestore.Timestamp.fromMillis(
+        //         currentTime.toMillis() + delay
+        //     );
+        //     batch.update(doc.ref, { scheduled_at: newTime });
+        // });
 
         console.log(
             `⏩ shifted ${later.size} matches on ${after.venue} by ${
