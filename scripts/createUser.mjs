@@ -1,7 +1,7 @@
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
-import key from "./serviceAccountKey.json" assert { type: "json" };
+import key from "./serviceAccountKey.json" with { type: "json" };
 
 // Usage: node scripts/createUser.mjs <email> <password> [full_name]
 const [, , email, password, fullName = "Player"] = process.argv;
