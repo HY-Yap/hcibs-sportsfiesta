@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
@@ -38,7 +38,10 @@
         <div id="nav-placeholder"></div>
 
         <main class="sf-home-main">
-            <section class="sf-home-section sf-hero" aria-labelledby="home-title">
+            <section
+                class="sf-home-section sf-hero"
+                aria-labelledby="home-title"
+            >
                 <div class="sf-hero-blob sf-hero-blob--yellow"></div>
                 <div class="sf-hero-blob sf-hero-blob--blue"></div>
 
@@ -53,6 +56,11 @@
                     aria-hidden="true"
                 >
                     <svg viewBox="0 0 160 160" role="img">
+                        <defs>
+                            <clipPath id="basketball-seams">
+                                <circle cx="80" cy="80" r="71.5" />
+                            </clipPath>
+                        </defs>
                         <circle
                             cx="80"
                             cy="80"
@@ -68,13 +76,15 @@
                             fill="#ffc75a"
                             opacity=".55"
                         />
-                        <path
-                            d="M80 6c-26 34-26 114 0 148M80 6c26 34 26 114 0 148M7 80c37-25 109-25 146 0M24 25c43 24 87 66 112 111"
-                            fill="none"
-                            stroke="#27313e"
-                            stroke-width="3.5"
-                            stroke-linecap="round"
-                        />
+                        <g clip-path="url(#basketball-seams)">
+                            <path
+                                d="M80 5c-29 36-29 114 0 150M5 80c39-25 111-25 150 0M27 27c42 25 82 64 106 106"
+                                fill="none"
+                                stroke="#27313e"
+                                stroke-width="3.5"
+                                stroke-linecap="round"
+                            />
+                        </g>
                     </svg>
                 </div>
 
@@ -141,8 +151,12 @@
                                 opacity=".42"
                                 clip-path="url(#badminton-racket-strings)"
                             >
-                                <path d="M36 4v130M52 4v130M68 4v130M84 4v130M100 4v130M116 4v130" />
-                                <path d="M20 24h112M20 42h112M20 60h112M20 78h112M20 96h112M20 114h112" />
+                                <path
+                                    d="M36 4v130M52 4v130M68 4v130M84 4v130M100 4v130M116 4v130"
+                                />
+                                <path
+                                    d="M20 24h112M20 42h112M20 60h112M20 78h112M20 96h112M20 114h112"
+                                />
                             </g>
                             <ellipse
                                 cx="76"
@@ -210,7 +224,7 @@
                 >
                     <svg viewBox="0 0 230 110" role="img">
                         <path
-                            d="M7 43c2 31 49 55 108 55s106-24 108-55v20c-4 28-50 47-108 47S11 91 7 63V43Z"
+                            d="M7 55c0 21 48 38 108 38s108-17 108-38v11c0 21-48 38-108 38S7 87 7 66V55Z"
                             fill="#3d948c"
                             stroke="#27313e"
                             stroke-width="5"
@@ -218,7 +232,7 @@
                         />
                         <ellipse
                             cx="115"
-                            cy="43"
+                            cy="55"
                             rx="108"
                             ry="38"
                             fill="#52afa5"
@@ -227,14 +241,21 @@
                         />
                         <ellipse
                             cx="115"
-                            cy="40"
+                            cy="52"
                             rx="66"
                             ry="21"
                             fill="#bee6de"
                             stroke="#27313e"
                             stroke-width="3"
                         />
-                        <ellipse cx="94" cy="31" rx="19" ry="6" fill="#fff" opacity=".34" />
+                        <ellipse
+                            cx="94"
+                            cy="43"
+                            rx="19"
+                            ry="6"
+                            fill="#fff"
+                            opacity=".34"
+                        />
                     </svg>
                 </div>
 
@@ -251,7 +272,6 @@
                     <p class="sf-sports-list">
                         Badminton • Basketball • Frisbee • Volleyball
                     </p>
-                    <p class="sf-hero-copy">Schedules, results and awards.</p>
                     <a href="schedule.html" class="sf-primary-button">
                         View schedule
                         <svg
@@ -285,73 +305,164 @@
                 </div>
             </section>
 
-            <section class="sf-home-section sf-numbers" aria-labelledby="numbers-title">
-                <div class="sf-section-inner sf-reveal">
-                    <p class="sf-eyebrow">Quick numbers</p>
-                    <h2 id="numbers-title" class="sf-section-heading">
-                        Four sports, at a glance.
-                    </h2>
-
-                    <div class="sf-stats-grid">
-                        <article class="sf-stat-card">
-                            <div class="sf-stat-top">
-                                <span class="sf-stat-label">Badminton</span>
-                                <span class="sf-stat-dot sf-stat-dot--blue"></span>
+            <section
+                class="sf-home-section sf-numbers"
+                aria-labelledby="numbers-title"
+            >
+                <div class="sf-number-stage">
+                    <div class="sf-number-scene sf-number-intro" data-number-scene>
+                        <div class="sf-number-scene-inner">
+                            <h2 id="numbers-title" class="sf-number-title">
+                                <span>4</span> SPORTS
+                            </h2>
+                            <div class="sf-number-scroll-cue" aria-hidden="true">
+                                <span>Scroll to explore</span>
+                                <i></i>
                             </div>
-                            <div class="sf-stat-value-row">
-                                <span id="badminton-teams" class="sf-stat-value">--</span>
-                                <span class="sf-stat-unit">teams</span>
-                            </div>
-                        </article>
-
-                        <article class="sf-stat-card">
-                            <div class="sf-stat-top">
-                                <span class="sf-stat-label">Basketball</span>
-                                <span class="sf-stat-dot sf-stat-dot--orange"></span>
-                            </div>
-                            <div class="sf-stat-value-row">
-                                <span id="basketball-teams" class="sf-stat-value">--</span>
-                                <span class="sf-stat-unit">teams</span>
-                            </div>
-                        </article>
-
-                        <article class="sf-stat-card">
-                            <div class="sf-stat-top">
-                                <span class="sf-stat-label">Frisbee</span>
-                                <span class="sf-stat-dot sf-stat-dot--teal"></span>
-                            </div>
-                            <div class="sf-stat-value-row">
-                                <span id="frisbee-teams" class="sf-stat-value">--</span>
-                                <span class="sf-stat-unit">teams</span>
-                            </div>
-                        </article>
-
-                        <article class="sf-stat-card">
-                            <div class="sf-stat-top">
-                                <span class="sf-stat-label">Volleyball</span>
-                                <span class="sf-stat-dot sf-stat-dot--red"></span>
-                            </div>
-                            <div class="sf-stat-value-row">
-                                <span id="volleyball-teams" class="sf-stat-value">--</span>
-                                <span class="sf-stat-unit">teams</span>
-                            </div>
-                        </article>
-
-                        <article class="sf-stat-card">
-                            <div class="sf-stat-top">
-                                <span class="sf-stat-label">Total</span>
-                                <span class="sf-stat-dot sf-stat-dot--yellow"></span>
-                            </div>
-                            <div class="sf-stat-value-row">
-                                <span id="total-matches" class="sf-stat-value">--</span>
-                                <span class="sf-stat-unit">matches</span>
-                            </div>
-                        </article>
+                        </div>
                     </div>
+
+                    <div class="sf-stage-progress" aria-hidden="true">
+                        <span class="sf-stage-progress-label">
+                            <span data-progress-label-old></span>
+                            <span data-progress-label>01 · BADMINTON</span>
+                        </span>
+                        <i><b></b></i>
+                        <span class="sf-stage-progress-end">
+                            <span data-progress-end-old></span>
+                            <span data-progress-end>04 SPORTS</span>
+                        </span>
+                    </div>
+
+                    <article
+                        class="sf-number-scene sf-stat-scene sf-stat-scene--badminton"
+                        data-number-scene
+                    >
+                        <div class="sf-number-scene-inner sf-stat-focus">
+                            <div class="sf-stat-card">
+                                <div class="sf-stat-top">
+                                    <span class="sf-stat-kicker">Sport one</span>
+                                    <span
+                                        class="sf-stat-dot sf-stat-dot--blue"
+                                    ></span>
+                                </div>
+                                <h3 class="sf-stat-label">Badminton</h3>
+                                <div class="sf-stat-value-row">
+                                    <span id="badminton-teams" class="sf-stat-value"
+                                        >--</span
+                                    >
+                                    <span class="sf-stat-unit">teams</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article
+                        class="sf-number-scene sf-stat-scene sf-stat-scene--basketball"
+                        data-number-scene
+                    >
+                        <div class="sf-number-scene-inner sf-stat-focus">
+                            <div class="sf-stat-card">
+                                <div class="sf-stat-top">
+                                    <span class="sf-stat-kicker">Sport two</span>
+                                    <span
+                                        class="sf-stat-dot sf-stat-dot--orange"
+                                    ></span>
+                                </div>
+                                <h3 class="sf-stat-label">Basketball</h3>
+                                <div class="sf-stat-value-row">
+                                    <span
+                                        id="basketball-teams"
+                                        class="sf-stat-value"
+                                        >--</span
+                                    >
+                                    <span class="sf-stat-unit">teams</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article
+                        class="sf-number-scene sf-stat-scene sf-stat-scene--frisbee"
+                        data-number-scene
+                    >
+                        <div class="sf-number-scene-inner sf-stat-focus">
+                            <div class="sf-stat-card">
+                                <div class="sf-stat-top">
+                                    <span class="sf-stat-kicker">Sport three</span>
+                                    <span
+                                        class="sf-stat-dot sf-stat-dot--teal"
+                                    ></span>
+                                </div>
+                                <h3 class="sf-stat-label">Frisbee</h3>
+                                <div class="sf-stat-value-row">
+                                    <span id="frisbee-teams" class="sf-stat-value"
+                                        >--</span
+                                    >
+                                    <span class="sf-stat-unit">teams</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article
+                        class="sf-number-scene sf-stat-scene sf-stat-scene--volleyball"
+                        data-number-scene
+                    >
+                        <div class="sf-number-scene-inner sf-stat-focus">
+                            <div class="sf-stat-card">
+                                <div class="sf-stat-top">
+                                    <span class="sf-stat-kicker">Sport four</span>
+                                    <span
+                                        class="sf-stat-dot sf-stat-dot--red"
+                                    ></span>
+                                </div>
+                                <h3 class="sf-stat-label">Volleyball</h3>
+                                <div class="sf-stat-value-row">
+                                    <span
+                                        id="volleyball-teams"
+                                        class="sf-stat-value"
+                                        >--</span
+                                    >
+                                    <span class="sf-stat-unit">teams</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article
+                        class="sf-number-scene sf-stat-scene sf-stat-scene--total"
+                        data-number-scene
+                    >
+                        <div class="sf-number-scene-inner sf-stat-focus">
+                            <div class="sf-stat-card">
+                                <div class="sf-stat-top">
+                                    <span class="sf-stat-kicker"
+                                        >Tournament total</span
+                                    >
+                                    <span
+                                        class="sf-stat-dot sf-stat-dot--yellow"
+                                    ></span>
+                                </div>
+                                <h3 class="sf-stat-label">Total</h3>
+                                <div class="sf-stat-value-row">
+                                    <span
+                                        id="total-matches"
+                                        class="sf-stat-value"
+                                        >--</span
+                                    >
+                                    <span class="sf-stat-unit">matches</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
                 </div>
             </section>
 
-            <section class="sf-home-section sf-updates" aria-labelledby="updates-title">
+            <section
+                class="sf-home-section sf-updates"
+                aria-labelledby="updates-title"
+            >
                 <div class="sf-section-inner sf-reveal">
                     <p class="sf-eyebrow">Tournament updates</p>
                     <h2 id="updates-title" class="sf-section-heading">
@@ -375,9 +486,13 @@
                             </div>
                         </article>
 
-                        <article class="sf-update-panel sf-update-panel--upcoming">
+                        <article
+                            class="sf-update-panel sf-update-panel--upcoming"
+                        >
                             <header class="sf-update-heading">
-                                <h3 class="sf-update-title">Upcoming matches</h3>
+                                <h3 class="sf-update-title">
+                                    Upcoming matches
+                                </h3>
                                 <a
                                     href="matches-and-results.html"
                                     class="sf-text-link"
@@ -422,7 +537,9 @@
                         </div>
                         <div class="sf-footer-column">
                             <h3>Follow</h3>
-                            <a href="matches-and-results.html">Matches &amp; Results</a>
+                            <a href="matches-and-results.html"
+                                >Matches &amp; Results</a
+                            >
                             <a href="awards.html">Awards</a>
                         </div>
                         <div class="sf-footer-column">
@@ -455,13 +572,11 @@
                         </button>
                     </div>
                     <p class="mt-4 text-base text-gray-700 text-center">
-                        Sign in with the account provided to access your dashboard.
+                        Sign in with the account provided to access your
+                        dashboard.
                     </p>
                     <div class="mt-6 flex gap-2">
-                        <button
-                            id="noticeOk"
-                            class="sf-modal-button flex-1"
-                        >
+                        <button id="noticeOk" class="sf-modal-button flex-1">
                             Got it
                         </button>
                     </div>

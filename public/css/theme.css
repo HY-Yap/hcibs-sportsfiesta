@@ -151,11 +151,9 @@ body:not(.sf-home) .sport-tab {
     border-radius: 999px !important;
     color: var(--sf-ink) !important;
     background: #fff !important;
-    box-shadow: 0 3px 0 #d9d0c3;
-    transform: translateY(0);
+    box-shadow: 0 3px 12px rgba(39, 49, 62, 0.05);
     transition: color 160ms ease, background 160ms ease,
-        border-color 160ms ease, box-shadow 160ms ease,
-        transform 160ms ease !important;
+        border-color 160ms ease, box-shadow 160ms ease !important;
 }
 
 body:not(.sf-home) .tabs {
@@ -178,8 +176,7 @@ body:not(.sf-home) .sport-tab:hover {
     border-color: #c8bbaa !important;
     color: var(--sf-red) !important;
     background: #fffaf2 !important;
-    box-shadow: 0 4px 0 #d9d0c3;
-    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(39, 49, 62, 0.08);
 }
 
 body:not(.sf-home) .tab-button.active,
@@ -190,15 +187,13 @@ body:not(.sf-home) .tab-btn.text-blue-500 {
     border-color: var(--sf-red-dark) !important;
     color: #fff !important;
     background: var(--sf-red) !important;
-    box-shadow: 0 3px 0 var(--sf-red-dark);
-    transform: translateY(0);
+    box-shadow: 0 5px 16px rgba(243, 91, 80, 0.2);
 }
 
 body:not(.sf-home) .tab-btn:active,
 body:not(.sf-home) .tab-button:active,
 body:not(.sf-home) .sport-tab:active {
-    box-shadow: 0 1px 0 #d9d0c3;
-    transform: translateY(2px);
+    box-shadow: 0 2px 8px rgba(39, 49, 62, 0.08);
 }
 
 body:not(.sf-home) .tab-btn:focus-visible,
