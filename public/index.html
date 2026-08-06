@@ -1,8 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta
+            name="description"
+            content="Sports Fiesta schedules, results, athletes and awards."
+        />
         <title>Sports Fiesta</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
@@ -11,176 +15,554 @@
                     extend: {
                         colors: {
                             primary: {
-                                light: "#3b82f6",
-                                DEFAULT: "#2563eb",
-                                dark: "#1e40af",
+                                light: "#ff8177",
+                                DEFAULT: "#f35b50",
+                                dark: "#d9473e",
                             },
                             accent: {
-                                light: "#fde047",
-                                DEFAULT: "#facc15",
-                                dark: "#ca8a04",
-                            },
-                            danger: {
-                                light: "#ef4444",
-                                DEFAULT: "#dc2626",
-                                dark: "#b91c1c",
+                                light: "#fff4d9",
+                                DEFAULT: "#f2cc4d",
+                                dark: "#f59d19",
                             },
                         },
                     },
                 },
             };
         </script>
+        <link rel="stylesheet" href="css/theme.css" data-sf-theme="true" />
+        <link rel="stylesheet" href="css/homepage.css" />
         <link rel="icon" href="data:," />
     </head>
-    <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
-        <!-- NAVIGATION GETS INJECTED HERE -->
+
+    <body class="sf-home min-h-screen">
         <div id="nav-placeholder"></div>
 
-        <!-- PAGE CONTENT -->
-        <!-- Replace the current main content with this -->
-        <main class="p-8">
-            <!-- Hero Section -->
-            <div
-                class="bg-gradient-to-r from-primary to-primary-dark text-white rounded-lg p-8 mb-8"
+        <main class="sf-home-main">
+            <section
+                class="sf-home-section sf-hero"
+                aria-labelledby="home-title"
             >
-                <div class="max-w-4xl mx-auto text-center">
-                    <!-- Replace the h1 with logo -->
-                    <div class="mb-6">
-                        <img
-                            src="logo.png"
-                            alt="Sports Fiesta 2025"
-                            class="h-16 md:h-20 lg:h-24 mx-auto object-contain drop-shadow-lg"
+                <div class="sf-hero-blob sf-hero-blob--yellow"></div>
+                <div class="sf-hero-blob sf-hero-blob--blue"></div>
+
+                <span class="sf-confetti sf-confetti--one"></span>
+                <span class="sf-confetti sf-confetti--two"></span>
+                <span class="sf-confetti sf-confetti--three"></span>
+                <span class="sf-confetti sf-confetti--four"></span>
+
+                <div
+                    class="sf-sport-object sf-sport-object--basketball"
+                    data-sport-object="basketball"
+                    aria-hidden="true"
+                >
+                    <svg viewBox="0 0 160 160" role="img">
+                        <defs>
+                            <clipPath id="basketball-seams">
+                                <circle cx="80" cy="80" r="71.5" />
+                            </clipPath>
+                        </defs>
+                        <circle
+                            cx="80"
+                            cy="80"
+                            r="74"
+                            fill="#f59d19"
+                            stroke="#27313e"
+                            stroke-width="5"
                         />
-                    </div>
-                    <p class="text-xl mb-6">
-                        The ultimate HCIBS sports competition!
+                        <circle
+                            cx="55"
+                            cy="45"
+                            r="16"
+                            fill="#ffc75a"
+                            opacity=".55"
+                        />
+                        <g clip-path="url(#basketball-seams)">
+                            <path
+                                d="M80 5c-29 36-29 114 0 150M5 80c39-25 111-25 150 0M27 27c42 25 82 64 106 106"
+                                fill="none"
+                                stroke="#27313e"
+                                stroke-width="3.5"
+                                stroke-linecap="round"
+                            />
+                        </g>
+                    </svg>
+                </div>
+
+                <div
+                    class="sf-sport-object sf-sport-object--volleyball"
+                    data-sport-object="volleyball"
+                    aria-hidden="true"
+                >
+                    <svg viewBox="0 0 165 165" role="img">
+                        <circle
+                            cx="82.5"
+                            cy="82.5"
+                            r="76"
+                            fill="#fff"
+                            stroke="#27313e"
+                            stroke-width="5"
+                        />
+                        <path
+                            d="M31 20c35 13 55 38 55 75 15-13 36-22 62-24-6-23-23-41-45-53-24-13-49-13-72 2Z"
+                            fill="#7eb6cf"
+                            stroke="#27313e"
+                            stroke-width="3"
+                            stroke-linejoin="round"
+                        />
+                        <path
+                            d="M17 108c34-3 65 8 91 35 20-15 34-38 39-66-39 5-76 15-130 31Z"
+                            fill="#f35b50"
+                            stroke="#27313e"
+                            stroke-width="3"
+                            stroke-linejoin="round"
+                        />
+                        <path
+                            d="M31 20c24 25 40 53 55 75M17 108c27-8 49-12 69-13M108 143c-2-22 9-47 39-66"
+                            fill="none"
+                            stroke="#27313e"
+                            stroke-width="3"
+                            stroke-linecap="round"
+                        />
+                    </svg>
+                </div>
+
+                <div
+                    class="sf-sport-object sf-sport-object--badminton"
+                    data-sport-object="badminton"
+                    aria-hidden="true"
+                >
+                    <svg viewBox="0 0 220 230" role="img">
+                        <defs>
+                            <clipPath id="badminton-racket-strings">
+                                <ellipse cx="76" cy="69" rx="50" ry="61" />
+                            </clipPath>
+                        </defs>
+                        <g transform="rotate(-12 78 116)">
+                            <ellipse
+                                cx="76"
+                                cy="69"
+                                rx="52"
+                                ry="63"
+                                fill="#eaf6f8"
+                            />
+                            <g
+                                stroke="#27313e"
+                                stroke-width="1.7"
+                                opacity=".42"
+                                clip-path="url(#badminton-racket-strings)"
+                            >
+                                <path
+                                    d="M36 4v130M52 4v130M68 4v130M84 4v130M100 4v130M116 4v130"
+                                />
+                                <path
+                                    d="M20 24h112M20 42h112M20 60h112M20 78h112M20 96h112M20 114h112"
+                                />
+                            </g>
+                            <ellipse
+                                cx="76"
+                                cy="69"
+                                rx="52"
+                                ry="63"
+                                fill="none"
+                                stroke="#27313e"
+                                stroke-width="5"
+                            />
+                            <path
+                                d="M76 131v51"
+                                fill="none"
+                                stroke="#27313e"
+                                stroke-width="8"
+                                stroke-linecap="round"
+                            />
+                            <path
+                                d="M76 178v42"
+                                fill="none"
+                                stroke="#27313e"
+                                stroke-width="18"
+                                stroke-linecap="round"
+                            />
+                            <path
+                                d="M76 178v42"
+                                fill="none"
+                                stroke="#f35b50"
+                                stroke-width="11"
+                                stroke-linecap="round"
+                            />
+                        </g>
+                        <g transform="rotate(14 175 57)">
+                            <path
+                                d="M148 15h55l-14 57h-25l-16-57Z"
+                                fill="#fff"
+                                stroke="#27313e"
+                                stroke-width="4"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M157 20l16 48M194 20l-13 48M175 19v49"
+                                fill="none"
+                                stroke="#7eb6cf"
+                                stroke-width="2.5"
+                                stroke-linecap="round"
+                            />
+                            <ellipse
+                                cx="177"
+                                cy="79"
+                                rx="15"
+                                ry="11"
+                                fill="#f2cc4d"
+                                stroke="#27313e"
+                                stroke-width="4"
+                            />
+                        </g>
+                    </svg>
+                </div>
+
+                <div
+                    class="sf-sport-object sf-sport-object--frisbee"
+                    data-sport-object="frisbee"
+                    aria-hidden="true"
+                >
+                    <svg viewBox="0 0 230 110" role="img">
+                        <path
+                            d="M7 55c0 21 48 38 108 38s108-17 108-38v11c0 21-48 38-108 38S7 87 7 66V55Z"
+                            fill="#3d948c"
+                            stroke="#27313e"
+                            stroke-width="5"
+                            stroke-linejoin="round"
+                        />
+                        <ellipse
+                            cx="115"
+                            cy="55"
+                            rx="108"
+                            ry="38"
+                            fill="#52afa5"
+                            stroke="#27313e"
+                            stroke-width="5"
+                        />
+                        <ellipse
+                            cx="115"
+                            cy="52"
+                            rx="66"
+                            ry="21"
+                            fill="#bee6de"
+                            stroke="#27313e"
+                            stroke-width="3"
+                        />
+                        <ellipse
+                            cx="94"
+                            cy="43"
+                            rx="19"
+                            ry="6"
+                            fill="#fff"
+                            opacity=".34"
+                        />
+                    </svg>
+                </div>
+
+                <div class="sf-hero-center sf-reveal">
+                    <span class="sf-event-badge">HCIBS • 2026</span>
+                    <h1 id="home-title" class="sr-only">Sports Fiesta</h1>
+                    <img
+                        src="logo.png"
+                        alt="Sports Fiesta"
+                        class="sf-hero-logo"
+                        width="455"
+                        height="180"
+                    />
+                    <p class="sf-sports-list">
+                        Badminton • Basketball • Frisbee • Volleyball
                     </p>
-                    <p class="text-sm mb-6">
-                        Note to all participants: do log in to access your
-                        dashboard for a filtered match schedule and personal
-                        stats! The credentials have been sent to you via email.
-                    </p>
-                    <!-- rest stays the same -->
-                </div>
-            </div>
-
-            <!-- Quick Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white rounded-lg shadow p-6 text-center">
-                    <div class="text-3xl mb-2">🏸</div>
-                    <div
-                        class="text-2xl font-bold text-primary"
-                        id="badminton-teams"
-                    >
-                        --
-                    </div>
-                    <div class="text-gray-600">Badminton Teams</div>
-                </div>
-                <div class="bg-white rounded-lg shadow p-6 text-center">
-                    <div class="text-3xl mb-2">🏀</div>
-                    <div
-                        class="text-2xl font-bold text-primary"
-                        id="basketball-teams"
-                    >
-                        --
-                    </div>
-                    <div class="text-gray-600">Basketball Teams</div>
-                </div>
-                <div class="bg-white rounded-lg shadow p-6 text-center">
-                    <div class="text-3xl mb-2">🥏</div>
-                    <div
-                        class="text-2xl font-bold text-primary"
-                        id="frisbee-teams"
-                    >
-                        --
-                    </div>
-                    <div class="text-gray-600">Frisbee Teams</div>
-                </div>
-                <div class="bg-white rounded-lg shadow p-6 text-center">
-                    <div class="text-3xl mb-2">🎯</div>
-                    <div
-                        class="text-2xl font-bold text-primary"
-                        id="total-matches"
-                    >
-                        --
-                    </div>
-                    <div class="text-gray-600">Total Matches</div>
-                </div>
-            </div>
-
-            <!-- Recent Results & Upcoming Matches -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Recent Results -->
-                <div class="bg-white rounded-lg shadow p-6 flex flex-col">
-                    <h2 class="text-xl font-bold mb-4 flex items-center">
-                        <span class="text-2xl mr-2">🎯</span> Latest Results
-                    </h2>
-                    <div id="recent-results" class="space-y-3 flex-grow">
-                        <div class="text-gray-500 text-center py-4">
-                            Loading recent matches...
-                        </div>
-                    </div>
-                    <div class="mt-4 text-center">
-                        <a
-                            href="matches-and-results.html"
-                            class="text-primary hover:text-primary-dark font-medium"
+                    <a href="schedule.html" class="sf-primary-button">
+                        View schedule
+                        <svg
+                            width="17"
+                            height="17"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            aria-hidden="true"
                         >
-                            Matches and Results →
-                        </a>
-                    </div>
+                            <path d="M5 12h14M13 6l6 6-6 6" />
+                        </svg>
+                    </a>
                 </div>
 
-                <!-- Upcoming Matches -->
-                <div class="bg-white rounded-lg shadow p-6 flex flex-col">
-                    <h2 class="text-xl font-bold mb-4 flex items-center">
-                        <span class="text-2xl mr-2">📅</span> Upcoming Matches
-                    </h2>
-                    <div id="upcoming-matches" class="space-y-3 flex-grow">
-                        <div class="text-gray-500 text-center py-4">
-                            Loading upcoming matches...
-                        </div>
-                    </div>
-                    <div class="mt-4 text-center">
-                        <a
-                            href="matches-and-results.html"
-                            class="text-primary hover:text-primary-dark font-medium"
-                        >
-                            Matches and Results →
-                        </a>
-                    </div>
+                <div class="sf-scroll-cue" aria-hidden="true">
+                    <span>SCROLL</span>
+                    <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                    >
+                        <path d="M12 4v16M6 14l6 6 6-6" />
+                    </svg>
                 </div>
-            </div>
+            </section>
 
-            <!-- Quick Actions (for authenticated users) -->
-            <div
-                id="user-actions"
-                class="mt-8 bg-accent-light/10 rounded-lg p-6 hidden"
+            <section
+                class="sf-home-section sf-numbers"
+                aria-labelledby="numbers-title"
             >
-                <h2 class="text-xl font-bold mb-4 text-center">
-                    Quick Actions
-                </h2>
-                <div class="flex flex-wrap justify-center gap-4">
-                    <!-- Actions will be dynamically populated based on user role -->
+                <div class="sf-number-stage">
+                    <div class="sf-number-scene sf-number-intro" data-number-scene>
+                        <div class="sf-number-scene-inner">
+                            <h2 id="numbers-title" class="sf-number-title">
+                                <span>4</span> SPORTS
+                            </h2>
+                            <div class="sf-number-scroll-cue" aria-hidden="true">
+                                <span>Scroll to explore</span>
+                                <i></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sf-stage-progress" aria-hidden="true">
+                        <span class="sf-stage-progress-label">
+                            <span data-progress-label-old></span>
+                            <span data-progress-label>01 · BADMINTON</span>
+                        </span>
+                        <i><b></b></i>
+                        <span class="sf-stage-progress-end">
+                            <span data-progress-end-old></span>
+                            <span data-progress-end>04 SPORTS</span>
+                        </span>
+                    </div>
+
+                    <article
+                        class="sf-number-scene sf-stat-scene sf-stat-scene--badminton"
+                        data-number-scene
+                    >
+                        <div class="sf-number-scene-inner sf-stat-focus">
+                            <div class="sf-stat-card">
+                                <div class="sf-stat-top">
+                                    <span class="sf-stat-kicker">Sport one</span>
+                                    <span
+                                        class="sf-stat-dot sf-stat-dot--blue"
+                                    ></span>
+                                </div>
+                                <h3 class="sf-stat-label">Badminton</h3>
+                                <div class="sf-stat-value-row">
+                                    <span id="badminton-teams" class="sf-stat-value"
+                                        >--</span
+                                    >
+                                    <span class="sf-stat-unit">teams</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article
+                        class="sf-number-scene sf-stat-scene sf-stat-scene--basketball"
+                        data-number-scene
+                    >
+                        <div class="sf-number-scene-inner sf-stat-focus">
+                            <div class="sf-stat-card">
+                                <div class="sf-stat-top">
+                                    <span class="sf-stat-kicker">Sport two</span>
+                                    <span
+                                        class="sf-stat-dot sf-stat-dot--orange"
+                                    ></span>
+                                </div>
+                                <h3 class="sf-stat-label">Basketball</h3>
+                                <div class="sf-stat-value-row">
+                                    <span
+                                        id="basketball-teams"
+                                        class="sf-stat-value"
+                                        >--</span
+                                    >
+                                    <span class="sf-stat-unit">teams</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article
+                        class="sf-number-scene sf-stat-scene sf-stat-scene--frisbee"
+                        data-number-scene
+                    >
+                        <div class="sf-number-scene-inner sf-stat-focus">
+                            <div class="sf-stat-card">
+                                <div class="sf-stat-top">
+                                    <span class="sf-stat-kicker">Sport three</span>
+                                    <span
+                                        class="sf-stat-dot sf-stat-dot--teal"
+                                    ></span>
+                                </div>
+                                <h3 class="sf-stat-label">Frisbee</h3>
+                                <div class="sf-stat-value-row">
+                                    <span id="frisbee-teams" class="sf-stat-value"
+                                        >--</span
+                                    >
+                                    <span class="sf-stat-unit">teams</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article
+                        class="sf-number-scene sf-stat-scene sf-stat-scene--volleyball"
+                        data-number-scene
+                    >
+                        <div class="sf-number-scene-inner sf-stat-focus">
+                            <div class="sf-stat-card">
+                                <div class="sf-stat-top">
+                                    <span class="sf-stat-kicker">Sport four</span>
+                                    <span
+                                        class="sf-stat-dot sf-stat-dot--red"
+                                    ></span>
+                                </div>
+                                <h3 class="sf-stat-label">Volleyball</h3>
+                                <div class="sf-stat-value-row">
+                                    <span
+                                        id="volleyball-teams"
+                                        class="sf-stat-value"
+                                        >--</span
+                                    >
+                                    <span class="sf-stat-unit">teams</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article
+                        class="sf-number-scene sf-stat-scene sf-stat-scene--total"
+                        data-number-scene
+                    >
+                        <div class="sf-number-scene-inner sf-stat-focus">
+                            <div class="sf-stat-card">
+                                <div class="sf-stat-top">
+                                    <span class="sf-stat-kicker"
+                                        >Tournament total</span
+                                    >
+                                    <span
+                                        class="sf-stat-dot sf-stat-dot--yellow"
+                                    ></span>
+                                </div>
+                                <h3 class="sf-stat-label">Total</h3>
+                                <div class="sf-stat-value-row">
+                                    <span
+                                        id="total-matches"
+                                        class="sf-stat-value"
+                                        >--</span
+                                    >
+                                    <span class="sf-stat-unit">matches</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
                 </div>
-            </div>
+            </section>
+
+            <section
+                class="sf-home-section sf-updates"
+                aria-labelledby="updates-title"
+            >
+                <div class="sf-section-inner sf-reveal">
+                    <p class="sf-eyebrow">Tournament updates</p>
+                    <h2 id="updates-title" class="sf-section-heading">
+                        Results &amp; what’s next
+                    </h2>
+
+                    <div class="sf-update-grid">
+                        <article class="sf-update-panel">
+                            <header class="sf-update-heading">
+                                <h3 class="sf-update-title">Latest results</h3>
+                                <a
+                                    href="matches-and-results.html"
+                                    class="sf-text-link"
+                                    >All results →</a
+                                >
+                            </header>
+                            <div id="recent-results" class="sf-match-list">
+                                <div class="text-gray-500 text-center py-4">
+                                    Loading recent matches...
+                                </div>
+                            </div>
+                        </article>
+
+                        <article
+                            class="sf-update-panel sf-update-panel--upcoming"
+                        >
+                            <header class="sf-update-heading">
+                                <h3 class="sf-update-title">
+                                    Upcoming matches
+                                </h3>
+                                <a
+                                    href="matches-and-results.html"
+                                    class="sf-text-link"
+                                    >Full schedule →</a
+                                >
+                            </header>
+                            <div id="upcoming-matches" class="sf-match-list">
+                                <div class="text-gray-500 text-center py-4">
+                                    Loading upcoming matches...
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section id="user-actions" class="sf-quick-actions hidden">
+                <h2>Quick actions</h2>
+                <div class="flex flex-wrap"></div>
+            </section>
         </main>
 
-        <!-- First-visit notice -->
+        <footer class="sf-home-footer">
+            <div class="sf-footer-inner">
+                <div class="sf-footer-main">
+                    <div>
+                        <img
+                            src="logo.png"
+                            alt="Sports Fiesta"
+                            class="sf-footer-logo"
+                            width="180"
+                            height="70"
+                        />
+                        <p class="sf-footer-year">HCIBS • 2026</p>
+                    </div>
+
+                    <div class="sf-footer-links">
+                        <div class="sf-footer-column">
+                            <h3>Browse</h3>
+                            <a href="schedule.html">Schedule</a>
+                            <a href="athletes.html">Athletes</a>
+                        </div>
+                        <div class="sf-footer-column">
+                            <h3>Follow</h3>
+                            <a href="matches-and-results.html"
+                                >Matches &amp; Results</a
+                            >
+                            <a href="awards.html">Awards</a>
+                        </div>
+                        <div class="sf-footer-column">
+                            <h3>Account</h3>
+                            <a href="#" class="auth-menu-btn">Login</a>
+                            <a href="dashboard.html">Dashboard</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="sf-footer-bottom">© 2026 Sports Fiesta</div>
+            </div>
+        </footer>
+
         <div
             id="firstVisitNotice"
-            class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 hidden"
+            class="sf-notice-backdrop fixed inset-0 z-[60] flex items-center justify-center bg-black/50 hidden"
         >
-            <!-- modal -->
             <div
-                class="relative w-[92%] max-w-md rounded-2xl bg-white shadow-xl mx-auto"
+                class="sf-notice-dialog relative w-[92%] max-w-md bg-white mx-auto"
             >
                 <div class="p-6">
                     <div class="flex items-center justify-between mb-2">
-                        <h3
-                            class="text-lg font-semibold text-gray-900 text-center w-full"
-                        >
-                            Welcome to Sports Fiesta!
-                        </h3>
+                        <h3 class="text-center w-full">Welcome!</h3>
                         <button
                             id="noticeClose"
                             aria-label="Close"
@@ -189,17 +571,12 @@
                             ✕
                         </button>
                     </div>
-
                     <p class="mt-4 text-base text-gray-700 text-center">
-                        Participants: you can sign in with the credentials that
-                        were emailed to you to access your Dashboard.
+                        Sign in with the account provided to access your
+                        dashboard.
                     </p>
-
-                    <div class="mt-6 flex flex-col sm:flex-row gap-2">
-                        <button
-                            id="noticeOk"
-                            class="inline-flex flex-1 items-center justify-center rounded-lg border px-4 py-2 text-base text-gray-700 hover:bg-gray-50 font-medium"
-                        >
+                    <div class="mt-6 flex gap-2">
+                        <button id="noticeOk" class="sf-modal-button flex-1">
                             Got it
                         </button>
                     </div>
@@ -210,11 +587,11 @@
             </div>
         </div>
 
-        <!-- include-nav must come after the placeholder -->
         <script src="js/include-nav.js"></script>
         <script src="js/firebase-init.js" type="module"></script>
         <script src="js/auth.js" type="module"></script>
         <script src="js/homepage.js" type="module"></script>
-        <script type="module" src="/js/first-visit-notice.js"></script>
+        <script src="js/homepage-effects.js" defer></script>
+        <script src="js/first-visit-notice.js" type="module"></script>
     </body>
 </html>
