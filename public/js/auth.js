@@ -44,14 +44,6 @@ function initAuth() {
 
     if (!modal || authLinks.length === 0) return; // nav not injected yet
     wired = true;
-    let lastFocusedElement = null;
-
-    const openModal = () => {
-        lastFocusedElement = document.activeElement;
-        modal.classList.remove("hidden");
-        document.body.classList.add("sf-modal-open");
-        window.requestAnimationFrame(() => emailInput?.focus());
-    };
 
     // Backdrop/Escape close
     modal.addEventListener("click", (e) => {
@@ -71,10 +63,8 @@ function initAuth() {
 
     window.closeModal = () => {
         modal.classList.add("hidden");
-        document.body.classList.remove("sf-modal-open");
         errP.classList.add("hidden");
         emailInput.value = passInput.value = "";
-        lastFocusedElement?.focus?.();
     };
 
     window.handleModalLogin = async () => {
@@ -132,7 +122,7 @@ function initAuth() {
         (a) =>
             (a.onclick = (e) => {
                 e.preventDefault();
-                openModal();
+                modal.classList.remove("hidden");
             })
     );
 
@@ -197,7 +187,7 @@ function initAuth() {
                 a.textContent = "Login";
                 a.onclick = (e) => {
                     e.preventDefault();
-                    openModal();
+                    modal.classList.remove("hidden");
                 };
             });
             logoutLinks.forEach((a) => a.classList.add("hidden"));

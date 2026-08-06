@@ -1,137 +1,187 @@
-<div class="sf-nav-shell">
-    <nav class="sf-nav" aria-label="Primary navigation">
-        <a href="index.html" class="sf-nav-brand" aria-label="Sports Fiesta home">
+<nav class="bg-primary-dark text-white shadow-lg">
+    <!-- Top bar -->
+    <div
+        class="w-full flex items-center justify-between px-4 sm:px-6 lg:px-10 h-16"
+    >
+        <a href="index.html" class="flex items-center gap-3 group">
             <img
                 src="logo.png"
                 alt="Sports Fiesta"
-                class="sf-nav-logo"
-                width="145"
-                height="52"
+                class="h-12 w-auto object-contain select-none group-hover:opacity-90 transition-opacity"
             />
+            <span class="sr-only">Sports Fiesta</span>
         </a>
-
-        <ul class="sf-nav-links">
-            <li><a href="schedule.html" class="sf-nav-link">Schedule</a></li>
-            <li><a href="athletes.html" class="sf-nav-link">Athletes</a></li>
-            <li>
-                <a href="matches-and-results.html" class="sf-nav-link"
-                    >Matches &amp; Results</a
-                >
-            </li>
-            <li><a href="awards.html" class="sf-nav-link">Awards</a></li>
-        </ul>
-
-        <div class="sf-nav-account">
-            <a href="#" class="auth-menu-btn sf-login-button">Login</a>
-            <a href="#" class="logout-btn sf-logout-button hidden">Logout</a>
-        </div>
 
         <button
             id="menu-toggle"
-            class="sf-menu-toggle"
-            type="button"
-            aria-label="Open navigation menu"
+            class="md:hidden p-2 hover:bg-primary/50 rounded transition-colors"
+            aria-label="Open menu"
             aria-controls="menu"
             aria-expanded="false"
         >
             <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
+                class="w-6 h-6"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
+                viewBox="0 0 24 24"
                 aria-hidden="true"
             >
-                <path d="M4 7h16M4 12h16M4 17h16" />
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 8h16M4 16h16"
+                />
             </svg>
         </button>
-    </nav>
 
-    <div id="menu" class="sf-mobile-menu hidden">
-        <ul class="sf-mobile-menu-list">
-            <li><a href="index.html" class="sf-nav-link">Home</a></li>
-            <li><a href="schedule.html" class="sf-nav-link">Schedule</a></li>
-            <li><a href="athletes.html" class="sf-nav-link">Athletes</a></li>
+        <ul class="hidden md:flex items-center gap-4 ml-auto">
             <li>
-                <a href="matches-and-results.html" class="sf-nav-link"
-                    >Matches &amp; Results</a
+                <a
+                    href="index.html"
+                    class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Home</a
                 >
             </li>
-            <li><a href="awards.html" class="sf-nav-link">Awards</a></li>
-            <li class="sf-mobile-account">
-                <a href="#" class="auth-menu-btn sf-login-button">Login</a>
-                <a href="#" class="logout-btn sf-logout-button hidden"
+            <li>
+                <a
+                    href="schedule.html"
+                    class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Schedule</a
+                >
+            </li>
+            <li>
+                <a
+                    href="athletes.html"
+                    class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Athletes</a
+                >
+            </li>
+            <li>
+                <a
+                    href="matches-and-results.html"
+                    class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Matches & Results</a
+                >
+            </li>
+            <li>
+                <a
+                    href="awards.html"
+                    class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Awards</a
+                >
+            </li>
+            <li>
+                <a
+                    href="#"
+                    class="auth-menu-btn hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent"
+                    >Login</a
+                >
+            </li>
+            <li>
+                <a
+                    href="#"
+                    class="logout-btn hover:bg-red-500/20 transition-colors py-2 px-2 rounded-lg hover:text-red-500 hidden"
                     >Logout</a
                 >
             </li>
         </ul>
     </div>
-</div>
 
+    <!-- Mobile menu (below the bar) -->
+    <ul
+        id="menu"
+        class="hidden flex flex-col gap-3 px-4 sm:px-6 lg:px-10 pb-3 md:hidden"
+    >
+        <li>
+            <a
+                href="index.html"
+                class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+                >Home</a
+            >
+        </li>
+        <li>
+            <a
+                href="schedule.html"
+                class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+                >Schedule</a
+            >
+        </li>
+        <li>
+            <a
+                href="athletes.html"
+                class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+                >Athletes</a
+            >
+        </li>
+        <li>
+            <a
+                href="matches-and-results.html"
+                class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+                >Matches & Results</a
+            >
+        </li>
+        <li>
+            <a
+                href="awards.html"
+                class="hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+                >Awards</a
+            >
+        </li>
+        <li>
+            <a
+                href="#"
+                class="auth-menu-btn hover:bg-accent/20 transition-colors py-2 px-2 rounded-lg hover:text-accent block"
+                >Login</a
+            >
+        </li>
+        <li>
+            <a
+                href="#"
+                class="logout-btn hover:bg-red-500/20 transition-colors py-2 px-2 rounded-lg hover:text-red-500 hidden block"
+                >Logout</a
+            >
+        </li>
+    </ul>
+</nav>
+
+<!-- Login Modal (unchanged) -->
 <div
     id="login-modal"
-    class="sf-login-backdrop hidden"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="login-modal-title"
+    class="fixed inset-0 hidden flex items-center justify-center bg-black/50 z-50"
 >
-    <div class="sf-login-dialog">
-        <button
-            type="button"
-            class="sf-modal-close"
-            onclick="closeModal()"
-            aria-label="Close login"
-        >
-            <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                aria-hidden="true"
-            >
-                <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-        </button>
-
-        <h2 id="login-modal-title">Login</h2>
-
-        <label class="sf-field-label" for="modal-email">Email</label>
+    <div class="bg-white rounded-lg w-11/12 max-w-sm p-6 shadow-lg">
+        <h2 class="text-xl font-semibold mb-4">Login</h2>
         <input
             id="modal-email"
-            class="sf-login-input"
             type="email"
-            placeholder="name@example.com"
-            autocomplete="email"
+            placeholder="Email"
+            class="w-full mb-3 p-2 border rounded hover:border-gray-500"
         />
-
-        <label class="sf-field-label" for="modal-pass">Password</label>
         <input
             id="modal-pass"
-            class="sf-login-input"
             type="password"
             placeholder="Password"
-            autocomplete="current-password"
+            class="w-full mb-2 p-2 border rounded hover:border-gray-500"
         />
-
-        <button id="forgot-btn" type="button" class="sf-forgot-button">
+        <button
+            id="forgot-btn"
+            type="button"
+            class="text-sm text-blue-600 hover:underline mb-3 text-left"
+        >
             Forgot password?
         </button>
-
-        <p id="modal-error" class="text-red-600 text-sm mb-4 hidden"></p>
-
-        <div class="sf-modal-actions">
-            <button type="button" onclick="closeModal()" class="sf-modal-button">
+        <p id="modal-error" class="text-red-600 text-sm mb-3 hidden"></p>
+        <div class="flex justify-end gap-2">
+            <button
+                onclick="closeModal()"
+                class="px-4 py-2 border rounded border-black hover:bg-gray-200"
+            >
                 Cancel
             </button>
             <button
-                type="button"
                 onclick="handleModalLogin()"
-                class="sf-modal-button sf-modal-button--primary"
+                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
                 Login
             </button>

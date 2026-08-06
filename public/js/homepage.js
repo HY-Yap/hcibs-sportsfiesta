@@ -87,37 +87,51 @@ async function loadHomepageData() {
 }
 
 async function loadTeamCounts() {
-    try {
-        const teamsSnap = await getDocs(collection(db, "teams"));
-        const counts = {
-            badminton: 0,
-            basketball: 0,
-            frisbee: 0,
-            volleyball: 0,
-        };
+    const events = [
+        "badminton_singles",
+        "badminton_doubles",
+        "basketball3v3",
+        "frisbee5v5",
+    ];
+    // Remove: let totalMatches = 0;
 
-        teamsSnap.forEach((teamDoc) => {
-            const eventId = String(teamDoc.data()?.event_id || "").toLowerCase();
-            if (eventId.includes("badminton")) counts.badminton += 1;
-            else if (eventId.includes("basketball")) counts.basketball += 1;
-            else if (eventId.includes("frisbee")) counts.frisbee += 1;
-            else if (eventId.includes("volleyball")) counts.volleyball += 1;
-        });
+    for (const event of events) {
+        try {
+            const teamsSnap = await getDocs(
+                query(collection(db, "teams"), where("event_id", "==", event))
+            );
 
-        const elementBySport = {
-            badminton: document.getElementById("badminton-teams"),
-            basketball: document.getElementById("basketball-teams"),
-            frisbee: document.getElementById("frisbee-teams"),
-            volleyball: document.getElementById("volleyball-teams"),
-        };
+            const count = teamsSnap.size;
+            console.log(`${event}: ${count} teams`);
 
-        Object.entries(elementBySport).forEach(([sport, element]) => {
-            if (element) element.textContent = counts[sport];
-        });
-    } catch (e) {
-        console.warn("Failed to load team counts:", e);
+            // Update UI based on event type
+            if (event.includes("badminton")) {
+                const badmintonElement =
+                    document.getElementById("badminton-teams");
+                if (badmintonElement) {
+                    const current = parseInt(badmintonElement.textContent) || 0;
+                    badmintonElement.textContent = current + count;
+                }
+            } else if (event === "basketball3v3") {
+                const basketballElement =
+                    document.getElementById("basketball-teams");
+                if (basketballElement) {
+                    basketballElement.textContent = count;
+                }
+            } else if (event === "frisbee5v5") {
+                const frisbeeElement = document.getElementById("frisbee-teams");
+                if (frisbeeElement) {
+                    frisbeeElement.textContent = count;
+                }
+            }
+
+            // Remove: totalMatches += Math.max(0, (count * (count - 1)) / 2);
+        } catch (e) {
+            console.warn(`Failed to load teams for ${event}:`, e);
+        }
     }
 
+    // 🔥 COUNT ACTUAL MATCHES FROM DATABASE
     try {
         const matchesSnap = await getDocs(collection(db, "matches"));
         const totalMatches = matchesSnap.size;
