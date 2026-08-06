@@ -63,15 +63,16 @@ async function refreshFirestoreCounts() {
         console.log("🔍 Refreshing Firestore counts...");
 
         // 🚀 Use getCountFromServer instead of getDocs
+        // Count only players (exclude admins, scorekeepers, etc.)
         const [usersCountSnap, teamsCountSnap] = await Promise.all([
-            getCountFromServer(collection(db, "users")),
+            getCountFromServer(query(collection(db, "users"), where("role", "==", "player"))),
             getCountFromServer(collection(db, "teams")),
         ]);
 
         const usersCount = usersCountSnap.data().count;
         const teamsCount = teamsCountSnap.data().count;
 
-        console.log("👥 Users count:", usersCount);
+        console.log("👥 Players count:", usersCount);
         console.log("🏆 Teams count:", teamsCount);
 
         els.playerCount.textContent = usersCount;
