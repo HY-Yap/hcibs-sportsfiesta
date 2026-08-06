@@ -117,17 +117,27 @@ function defaultDurationSeconds(match) {
             type === "semi" ||
             type === "final"
         ) {
-            return 15 * 60;
+            return 24 * 60;
         }
-        return 8 * 60;
+        return 16 * 60;
     }
     // Frisbee: finals 20, others 10
     if (eventId === "frisbee5v5") {
-        return type === "final" ? 20 * 60 : 10 * 60;
+        if (
+            type === "bronze" ||
+            type === "semi" ||
+            type === "final"
+        ) {
+            return 20 * 60;
+        }
+        return 10 * 60;
     }
     // Badminton singles & doubles: finals 15, others 10
     if (eventId.startsWith("badminton")) {
-        return type === "final" ? 15 * 60 : 10 * 60;
+        return type === "final" ? 99 * 60 : 10 * 60;
+    }
+    if (eventId.startsWith("volleyball")) {
+        return 20 * 60
     }
     // Generic fallback
     return 10 * 60;
