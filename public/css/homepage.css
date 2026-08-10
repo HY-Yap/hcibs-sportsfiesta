@@ -38,7 +38,7 @@
 /* Hero */
 .sf-hero {
     height: calc(100vh - var(--sf-home-nav-height));
-    height: calc(100dvh - var(--sf-home-nav-height));
+    height: calc(100svh - var(--sf-home-nav-height));
     min-height: 0;
     display: grid;
     place-items: center;
@@ -324,8 +324,11 @@
 
 /* Quick numbers */
 .sf-numbers {
+    --sf-stat-card-height: clamp(320px, 48svh, 470px);
+    --sf-stat-card-half-height: clamp(160px, 24svh, 235px);
+    --sf-progress-card-gap: 34px;
     height: 600vh;
-    height: 600dvh;
+    height: 600svh;
     background: var(--sf-cream);
     overflow: clip;
 }
@@ -339,14 +342,14 @@
     position: sticky;
     top: 0;
     height: 100vh;
-    height: 100dvh;
+    height: 100svh;
     overflow: hidden;
 }
 
 .sf-number-scene {
     position: absolute;
     inset: 0;
-    padding: clamp(96px, 13vh, 150px) clamp(24px, 5vw, 70px);
+    padding: clamp(96px, 13svh, 150px) clamp(24px, 5vw, 70px);
     display: grid;
     place-items: center;
     isolation: isolate;
@@ -519,7 +522,7 @@
 }
 
 .sf-stat-focus {
-    padding-top: 56px;
+    padding-top: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -530,7 +533,9 @@
     --progress-fill: 25%;
     --progress-opacity: 0;
     position: absolute;
-    top: calc(50% - clamp(165px, 29vh, 260px));
+    top: calc(
+        50% - var(--sf-stat-card-half-height) - var(--sf-progress-card-gap)
+    );
     left: 50%;
     z-index: 8;
     width: min(680px, calc(100% - 48px));
@@ -629,7 +634,8 @@
     position: relative;
     z-index: 1;
     width: min(680px, 100%);
-    min-height: clamp(320px, 48vh, 470px);
+    height: var(--sf-stat-card-height);
+    min-height: 0;
     padding: clamp(28px, 5vw, 58px);
     display: flex;
     flex-direction: column;
@@ -1172,7 +1178,6 @@
     }
 
     .sf-stat-card {
-        min-height: min(360px, 60dvh);
         padding: 28px 24px;
     }
 
@@ -1254,6 +1259,11 @@
 }
 
 @media (max-height: 620px) {
+    .sf-numbers {
+        --sf-stat-card-height: min(300px, 64svh);
+        --sf-stat-card-half-height: min(150px, 32svh);
+    }
+
     .sf-hero {
         padding: 20px 24px 48px;
     }
@@ -1313,7 +1323,6 @@
     }
 
     .sf-stat-card {
-        min-height: min(300px, 58dvh);
         padding: 24px clamp(24px, 5vw, 42px);
     }
 
