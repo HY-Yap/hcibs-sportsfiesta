@@ -123,6 +123,7 @@
     }
 
     const numberSection = document.querySelector(".sf-numbers");
+    const numberStage = document.querySelector(".sf-number-stage");
     const numberScenes = Array.from(
         document.querySelectorAll("[data-number-scene]"),
     );
@@ -258,7 +259,8 @@
             numberSection.classList.add("has-entered");
         }
         const scrollRange = Math.max(
-            numberSection.offsetHeight - window.innerHeight,
+            numberSection.offsetHeight -
+                (numberStage?.offsetHeight || window.innerHeight),
             1,
         );
         const sceneProgress =
@@ -295,7 +297,10 @@
                 : 1 - easedSwipe;
             const isActive = index === nextActiveIndex;
             const isFocused = isActive && opacity >= 0.98;
-            const verticalTravel = Math.min(window.innerHeight * 0.28, 240);
+            const verticalTravel = Math.min(
+                (numberStage?.offsetHeight || window.innerHeight) * 0.28,
+                240,
+            );
 
             scene.classList.toggle("is-active", isActive);
             scene.classList.toggle("is-focused", isFocused);
