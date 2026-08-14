@@ -83,10 +83,15 @@ function renderMainContent(role, userData) {
 function formatEventName(id){
   if(!id) return id;
   return id
+    .replace(/badminton_singles_male/,'Badminton Single Male')
+    .replace(/badminton_singles_female/,'Badminton Single Female')
+    .replace(/badminton_doubles_male/,'Badminton Double Male')
+    .replace(/badminton_doubles_female/,'Badminton Double Female')
     .replace(/badminton_singles/,'Badminton Singles')
     .replace(/badminton_doubles/,'Badminton Doubles')
     .replace(/frisbee5v5/,'Frisbee')
     .replace(/basketball3v3/,'Basketball')
+    .replace(/volleyball/,'Volleyball')
     .replace(/_/g,' ');
 }
 

@@ -3,14 +3,34 @@ import { auth } from "./firebase-init.js";
 
 const statsMsg = document.getElementById("stats-msg");
 const statsTables = document.getElementById("stats-tables");
-const tabButtons = document.querySelectorAll('.sport-tab');
+const topTabs = Array.from(document.querySelectorAll(".sport-tab"));
+const badmintonSubtabs = Array.from(
+  document.querySelectorAll(".badminton-subtab")
+);
+const badmintonSubtabWrap = document.getElementById("badminton-subtabs");
+
+const BADMINTON_EVENTS = [
+  { id: "badminton_singles_male", label: "Badminton Single Male" },
+  { id: "badminton_singles_female", label: "Badminton Single Female" },
+  { id: "badminton_doubles_male", label: "Badminton Double Male" },
+  { id: "badminton_doubles_female", label: "Badminton Double Female" },
+];
 
 const EVENTS = [
-  { id: 'badminton_singles', label: 'Badminton Singles' },
-  { id: 'badminton_doubles', label: 'Badminton Doubles' },
-  { id: 'frisbee5v5', label: 'Frisbee' },
-  { id: 'basketball3v3', label: 'Basketball' },
+  ...BADMINTON_EVENTS,
+  { id: "frisbee5v5", label: "Frisbee" },
+  { id: "basketball3v3", label: "Basketball" },
+  { id: "volleyball", label: "Volleyball" },
+  // legacy fallback
+  { id: "badminton_singles", label: "Badminton Singles" },
+  { id: "badminton_doubles", label: "Badminton Doubles" },
 ];
+
+const isGroupedEvent = (eventId) =>
+  eventId === "basketball3v3" ||
+  eventId === "frisbee5v5" ||
+  eventId === "volleyball" ||
+  String(eventId || "").startsWith("badminton");
 
 function showMsg(text) {
   statsMsg.textContent = text;
@@ -21,7 +41,7 @@ function hideMsg() {
 }
 
 function renderStatsTable(eventLabel, stats, eventId) {
-  const hasGroup = ['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId);
+  const hasGroup = isGroupedEvent(eventId);
   return `
     <div class="overflow-x-auto flex justify-center">
   <table class="min-w-full w-full table-auto whitespace-nowrap text-sm md:text-base mx-auto">
@@ -161,7 +181,7 @@ onAuthStateChanged(auth, async (user) => {
 
     // Group / advancement ranking
     let groupPlacing = 'NA';
-    if(['basketball3v3','frisbee5v5','badminton_singles','badminton_doubles'].includes(eventId) && qualifierMatches.length){
+    if(isGroupedEvent(eventId) && qualifierMatches.length){
       // find user's pool
       const userPool = qualifierMatches.reduce((pool, m) => {
         if(pool) return pool;
@@ -253,19 +273,55 @@ onAuthStateChanged(auth, async (user) => {
   statsTables.innerHTML = renderStatsTable(EVENTS.find(e=>e.id===eventId)?.label || eventId, stats, eventId);
   }
 
-  tabButtons.forEach(btn => btn.addEventListener('click', ()=> {
-    tabButtons.forEach(x=> x.classList.remove('border-primary','text-primary'));
-    btn.classList.add('border-primary','text-primary');
-    renderEvent(btn.dataset.sport);
+  let currentBadminton = badmintonSubtabs[0]?.dataset?.sport || BADMINTON_EVENTS[0].id;
+
+  const activate = (arr, btn) => {
+    arr.forEach(x => x.classList.remove('border-primary','text-primary'));
+    btn?.classList.add('border-primary','text-primary');
+  };
+
+  const openTop = (btn) => {
+    activate(topTabs, btn);
+    const sport = btn?.dataset?.sport;
+    if (sport === 'badminton') {
+      badmintonSubtabWrap?.classList.remove('hidden');
+      const activeSub = badmintonSubtabs.find(x => x.dataset.sport === currentBadminton) || badmintonSubtabs[0];
+      activate(badmintonSubtabs, activeSub);
+      renderEvent(currentBadminton);
+      return;
+    }
+    badmintonSubtabWrap?.classList.add('hidden');
+    renderEvent(sport);
+  };
+
+  topTabs.forEach(btn => btn.addEventListener('click', () => openTop(btn)));
+
+  badmintonSubtabs.forEach(btn => btn.addEventListener('click', () => {
+    currentBadminton = btn.dataset.sport;
+    activate(badmintonSubtabs, btn);
+    const badmintonTop = topTabs.find(x => x.dataset.sport === 'badminton');
+    if (badmintonTop?.classList.contains('text-primary')) {
+      renderEvent(currentBadminton);
+    }
   }));
 
-  // auto-open first event user participates in else first tab
   for(const e of EVENTS){
     if(userEvents.has(e.id)){
-      const b = document.querySelector(`.sport-tab[data-sport="${e.id}"]`);
-      if(b){ b.click(); return; }
+      if (BADMINTON_EVENTS.some(b => b.id === e.id)) {
+        currentBadminton = e.id;
+        const badTop = topTabs.find(x => x.dataset.sport === 'badminton');
+        if (badTop) {
+          openTop(badTop);
+          return;
+        }
+      }
+      const b = topTabs.find(x => x.dataset.sport === e.id);
+      if(b){
+        openTop(b);
+        return;
+      }
     }
   }
-  const first = document.querySelector('.sport-tab');
-  if(first) first.click();
+  const first = topTabs.find(x => x.dataset.sport === 'badminton') || topTabs[0];
+  if(first) openTop(first);
 });

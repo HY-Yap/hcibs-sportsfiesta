@@ -97,6 +97,73 @@ const norm = {
     str: (s) => (s || "").toString().trim(),
 };
 const uniq = (arr) => Array.from(new Set(arr));
+
+const EVENT_ALIASES = {
+    badminton_singles: "badminton_singles_male",
+    badminton_doubles: "badminton_doubles_male",
+    badminton_singles_male: "badminton_singles_male",
+    badminton_singles_female: "badminton_singles_female",
+    badminton_doubles_male: "badminton_doubles_male",
+    badminton_doubles_female: "badminton_doubles_female",
+    volleyball: "volleyball",
+    volleyball6v6: "volleyball",
+};
+
+const canon = (s) =>
+    String(s || "")
+        .toLowerCase()
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+const pickFirst = (row, keys) => {
+    for (const key of keys) {
+        if (row[key] != null && String(row[key]).trim() !== "") return row[key];
+    }
+    return "";
+};
+
+function normalizeEventId(raw) {
+    const v = String(raw || "").trim();
+    if (!v) return "";
+
+    if (EVENT_ALIASES[v]) return EVENT_ALIASES[v];
+    const c = canon(v);
+    const underscore = c.replace(/\s+/g, "_");
+    if (EVENT_ALIASES[underscore]) return EVENT_ALIASES[underscore];
+
+    if (c.includes("badminton")) {
+        const isSingle = c.includes("singles");
+        const isDouble = c.includes("doubles");
+        const isFemale =
+            c.includes("female") || c.includes("women") || c.includes("girls");
+        const isMale =
+            c.includes("male") || c.includes("men") || c.includes("boys");
+
+        if (isSingle && isFemale) return "badminton_singles_female";
+        if (isSingle && isMale) return "badminton_singles_male";
+        if (isDouble && isFemale) return "badminton_doubles_female";
+        if (isDouble && isMale) return "badminton_doubles_male";
+    }
+
+    if (c.includes("volleyball")) return "volleyball";
+    return v;
+}
+
+function resolveEventIdFromRow(r) {
+    return normalizeEventId(
+        pickFirst(r, [
+            "event_id",
+            "eventId",
+            "event",
+            "sport",
+            "sports",
+            "discipline",
+            "category",
+        ])
+    );
+}
+
 const setProgress = (pct) => {
     els.progressWrap.classList.remove("hidden");
     els.progressBar.style.width = `${pct}%`;
@@ -347,9 +414,18 @@ function validateTeams(rows, playersByEmail, capacityMap, rulesByEvent) {
 
     rows.forEach((r, idx) => {
         const rowNum = idx + 2;
-        const event_id = norm.str(r.event_id);
-        const team_name = norm.str(r.team_name);
-        const membersRaw = norm.str(r.member_emails);
+        const event_id = resolveEventIdFromRow(r);
+        const team_name = norm.str(
+            pickFirst(r, ["team_name", "team", "name", "teamName"])
+        );
+        const membersRaw = norm.str(
+            pickFirst(r, [
+                "member_emails",
+                "members",
+                "players",
+                "memberEmails",
+            ])
+        );
 
         if (!event_id) errors.push(`Teams.csv row ${rowNum}: missing event_id`);
         if (!team_name)
@@ -372,7 +448,7 @@ function validateTeams(rows, playersByEmail, capacityMap, rulesByEvent) {
 
         const emails = uniq(
             membersRaw
-                .split(";")
+                .split(/[;,|]/g)
                 .map((s) => norm.email(s))
                 .filter(Boolean)
         );
@@ -446,14 +522,22 @@ function validateMatches(rows, rulesByEvent) {
     rows.forEach((r, i) => {
         const row = i + 2;
 
-        const id = norm.str(r.id);
-        const event_id = norm.str(r.event_id);
-        const match_type = norm.str(r.match_type).toLowerCase();
-        const venue = norm.str(r.venue);
-        const scheduled_at_raw = norm.str(r.scheduled_at);
-        const pool = norm.str(r.pool);
-        const a = norm.str(r.competitor_a);
-        const b = norm.str(r.competitor_b);
+        const id = norm.str(pickFirst(r, ["id", "match_id", "matchId"]));
+        const event_id = resolveEventIdFromRow(r);
+        const match_type = norm
+            .str(pickFirst(r, ["match_type", "type", "matchType"]))
+            .toLowerCase();
+        const venue = norm.str(pickFirst(r, ["venue", "court", "location"]));
+        const scheduled_at_raw = norm.str(
+            pickFirst(r, ["scheduled_at", "datetime", "time", "scheduledAt"])
+        );
+        const pool = norm.str(pickFirst(r, ["pool", "group"]));
+        const a = norm.str(
+            pickFirst(r, ["competitor_a", "team_a", "player_a", "a"])
+        );
+        const b = norm.str(
+            pickFirst(r, ["competitor_b", "team_b", "player_b", "b"])
+        );
 
         if (!id) errors.push(`Matches.csv row ${row}: missing id`);
         if (id && seenId.has(id))
@@ -1225,6 +1309,17 @@ async function resetTeamsForEvents(events) {
 
 /* Compute default elim placeholders based on match id + event */
 function defaultParticipantsFor(eventId, matchId) {
+    const isBadmintonSingle = [
+        "badminton_singles",
+        "badminton_singles_male",
+        "badminton_singles_female",
+    ].includes(eventId);
+    const isBadmintonDouble = [
+        "badminton_doubles",
+        "badminton_doubles_male",
+        "badminton_doubles_female",
+    ].includes(eventId);
+
     // Basketball 3v3
     if (eventId === "basketball3v3") {
         if (/^B-QF1$/.test(matchId)) return ["BW1", "BW8"];
@@ -1239,7 +1334,7 @@ function defaultParticipantsFor(eventId, matchId) {
     }
 
     // Badminton Singles
-    if (eventId === "badminton_singles") {
+    if (isBadmintonSingle) {
         const sf = matchId.match(/^S-SF([12])-\d$/);
         if (sf) return sf[1] === "1" ? ["S1", "S4"] : ["S2", "S3"];
         if (/^S-F\d$/.test(matchId)) return ["SFW1", "SFW2"];
@@ -1248,7 +1343,7 @@ function defaultParticipantsFor(eventId, matchId) {
     }
 
     // Badminton Doubles
-    if (eventId === "badminton_doubles") {
+    if (isBadmintonDouble) {
         const sf = matchId.match(/^D-SF([12])-\d$/);
         if (sf) return sf[1] === "1" ? ["D1", "D4"] : ["D2", "D3"];
         if (/^D-F\d$/.test(matchId)) return ["DFW1", "DFW2"];

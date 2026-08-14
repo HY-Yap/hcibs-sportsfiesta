@@ -20,6 +20,11 @@
                                 DEFAULT: "#facc15",
                                 dark: "#ca8a04",
                             },
+                            danger: {
+                                light: "#ef4444",
+                                DEFAULT: "#dc2626",
+                                dark: "#b91c1c",
+                            },
                         },
                     },
                 },
@@ -56,16 +61,10 @@
                         All Events
                     </button>
                     <button
-                        id="tab-badminton_singles"
+                        id="tab-badminton"
                         class="tab-button px-4 py-2 rounded font-medium transition"
                     >
-                        🏸 Badminton Singles
-                    </button>
-                    <button
-                        id="tab-badminton_doubles"
-                        class="tab-button px-4 py-2 rounded font-medium transition"
-                    >
-                        🏸 Badminton Doubles
+                        🏸 Badminton
                     </button>
                     <button
                         id="tab-basketball3v3"
@@ -78,6 +77,41 @@
                         class="tab-button px-4 py-2 rounded font-medium transition"
                     >
                         🥏 Frisbee 5v5
+                    </button>
+                    <button
+                        id="tab-volleyball"
+                        class="tab-button px-4 py-2 rounded font-medium transition"
+                    >
+                        🏐 Volleyball
+                    </button>
+                </div>
+                <div
+                    id="badminton-subtabs"
+                    class="flex flex-wrap gap-2 bg-white rounded-lg p-2 shadow mt-2 hidden"
+                >
+                    <button
+                        id="tab-badminton_singles_male"
+                        class="badminton-subtab px-3 py-1.5 text-sm border rounded hover:border-primary hover:text-primary transition"
+                    >
+                        Single Male
+                    </button>
+                    <button
+                        id="tab-badminton_singles_female"
+                        class="badminton-subtab px-3 py-1.5 text-sm border rounded hover:border-primary hover:text-primary transition"
+                    >
+                        Single Female
+                    </button>
+                    <button
+                        id="tab-badminton_doubles_male"
+                        class="badminton-subtab px-3 py-1.5 text-sm border rounded hover:border-primary hover:text-primary transition"
+                    >
+                        Double Male
+                    </button>
+                    <button
+                        id="tab-badminton_doubles_female"
+                        class="badminton-subtab px-3 py-1.5 text-sm border rounded hover:border-primary hover:text-primary transition"
+                    >
+                        Double Female
                     </button>
                 </div>
             </div>

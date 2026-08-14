@@ -16,6 +16,19 @@ const db = window.firebase.db;
 const container = document.getElementById("match-container");
 const rankingContainer = document.getElementById("ranking-container");
 
+const BADMINTON_SINGLE_EVENTS = new Set([
+    "badminton_singles",
+    "badminton_singles_male",
+    "badminton_singles_female",
+]);
+const BADMINTON_DOUBLE_EVENTS = new Set([
+    "badminton_doubles",
+    "badminton_doubles_male",
+    "badminton_doubles_female",
+]);
+const isBadmintonEvent = (id) =>
+    BADMINTON_SINGLE_EVENTS.has(id) || BADMINTON_DOUBLE_EVENTS.has(id);
+
 /* ----------  team-name cache with event-scoped resolution ---------- */
 const cache = new Map();
 
@@ -150,12 +163,11 @@ function rankingTable(eventId, data) {
         document.head.appendChild(style);
         window.__rankingWidenCSS = true;
     }
-    const hasGroup = [
-        "basketball3v3",
-        "frisbee5v5",
-        "badminton_singles",
-        "badminton_doubles",
-    ].includes(eventId);
+    const hasGroup =
+        eventId === "basketball3v3" ||
+        eventId === "frisbee5v5" ||
+        eventId === "volleyball" ||
+        isBadmintonEvent(eventId);
     // Column setup: insert separate Group column when grouped events
     const cols = hasGroup
         ? [
@@ -768,28 +780,60 @@ function listen(eventId) {
 
 /* ----------  sport-tabs wiring ---------- */
 (function initTabs() {
-    const btns = document.querySelectorAll(".sport-tab");
+    const topBtns = Array.from(document.querySelectorAll(".sport-tab"));
+    const badmintonSubBtns = Array.from(
+        document.querySelectorAll(".badminton-subtab")
+    );
+    const badmintonSubWrap = document.getElementById("badminton-subtabs");
     let off = null;
+    let currentBadminton =
+        badmintonSubBtns[0]?.dataset?.sport || "badminton_singles_male";
 
-    const activate = (b) => {
-        btns.forEach((x) =>
+    const activate = (arr, activeBtn) => {
+        arr.forEach((x) =>
             x.classList.remove("border-primary", "text-primary")
         );
-        b.classList.add("border-primary", "text-primary");
+        activeBtn?.classList.add("border-primary", "text-primary");
     };
 
-    btns.forEach((b) =>
+    const openEvent = (eventId) => {
+        if (off) off();
+        off = listen(eventId);
+    };
+
+    const openTop = (btn) => {
+        activate(topBtns, btn);
+        const sport = btn?.dataset?.sport;
+
+        if (sport === "badminton") {
+            badmintonSubWrap?.classList.remove("hidden");
+            const activeSub =
+                badmintonSubBtns.find(
+                    (x) => x.dataset.sport === currentBadminton
+                ) || badmintonSubBtns[0];
+            activate(badmintonSubBtns, activeSub);
+            openEvent(currentBadminton);
+            return;
+        }
+
+        badmintonSubWrap?.classList.add("hidden");
+        openEvent(sport);
+    };
+
+    topBtns.forEach((b) => b.addEventListener("click", () => openTop(b)));
+
+    badmintonSubBtns.forEach((b) =>
         b.addEventListener("click", () => {
-            activate(b);
-            if (off) off(); // detach previous listener
-            off = listen(b.dataset.sport);
+            currentBadminton = b.dataset.sport;
+            activate(badmintonSubBtns, b);
+            const badTop = topBtns.find((x) => x.dataset.sport === "badminton");
+            if (badTop?.classList.contains("text-primary")) {
+                openEvent(currentBadminton);
+            }
         })
     );
 
-    /* open first tab */
-    (
-        document.querySelector('[data-sport="badminton_singles"]') ||
-        document.querySelector('[data-sport="badminton_doubles"]') ||
-        btns[0]
-    ).click();
+    const defaultTop =
+        topBtns.find((x) => x.dataset.sport === "badminton") || topBtns[0];
+    if (defaultTop) openTop(defaultTop);
 })();

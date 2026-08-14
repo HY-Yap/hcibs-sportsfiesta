@@ -17,17 +17,32 @@ const tmpl = document.getElementById("awardTemplate");
 
 /* -------- helpers ------------------------------------------------------ */
 
-const pretty = (id) =>
-    id
+const pretty = (id) => {
+    const map = {
+        badminton_singles_male: "Badminton Single Male",
+        badminton_singles_female: "Badminton Single Female",
+        badminton_doubles_male: "Badminton Double Male",
+        badminton_doubles_female: "Badminton Double Female",
+        badminton_singles: "Badminton Singles",
+        badminton_doubles: "Badminton Doubles",
+        frisbee5v5: "Frisbee 5v5",
+        basketball3v3: "Basketball 3v3",
+        volleyball: "Volleyball",
+    };
+    if (map[id]) return map[id];
+    return id
         .replace(/_/g, " ")
         .replace(/\b([a-z])/g, (m) => m.toUpperCase())
-        .replace("Singles", "(Singles)")
-        .replace("Doubles", "(Doubles)")
         .replace("5v5", " 5v5")
         .replace("3v3", " 3v3");
+};
 
 const teamCache = new Map();
 const emailToName = {}; // email -> full name mapping
+const DEPRECATED_EVENT_IDS = new Set([
+    "badminton_singles",
+    "badminton_doubles",
+]);
 
 // Load user profiles for full names (run once at startup)
 async function loadUserNames() {
@@ -188,7 +203,10 @@ async function renderEvent(eventId, awardData) {
 await loadUserNames();
 
 const evSnap = await getDocs(collection(db, "events"));
-const evIds = evSnap.docs.map((d) => d.id).sort();
+const evIds = evSnap.docs
+    .map((d) => d.id)
+    .filter((id) => !DEPRECATED_EVENT_IDS.has(id))
+    .sort();
 
 /* create placeholder sections */
 evIds.forEach((eid) => renderEvent(eid, null));

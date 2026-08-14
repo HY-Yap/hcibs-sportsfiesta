@@ -10,22 +10,50 @@ import {
 
 let allTeams = [];
 let currentFilter = "all";
+let currentBadmintonSubFilter = "badminton_singles_male";
 let emailToName = {}; // email -> full name mapping
+
+const looksLikeEmail = (value) =>
+    typeof value === "string" && /.+@.+\..+/.test(value.trim());
+
+function resolveDisplayName(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "Unknown";
+
+    if (looksLikeEmail(raw)) {
+        const key = raw.toLowerCase();
+        if (emailToName[key]) return emailToName[key];
+        const username = raw.split("@")[0];
+        return username.charAt(0).toUpperCase() + username.slice(1);
+    }
+
+    return raw;
+}
 
 // Event icons
 const eventIcons = {
     badminton_singles: "🏸",
     badminton_doubles: "🏸",
+    badminton_singles_male: "🏸",
+    badminton_singles_female: "🏸",
+    badminton_doubles_male: "🏸",
+    badminton_doubles_female: "🏸",
     basketball3v3: "🏀",
     frisbee5v5: "🥏",
+    volleyball: "🏐",
 };
 
 // Event display names
 const eventNames = {
     badminton_singles: "Badminton Singles",
     badminton_doubles: "Badminton Doubles",
+    badminton_singles_male: "Badminton Single Male",
+    badminton_singles_female: "Badminton Single Female",
+    badminton_doubles_male: "Badminton Double Male",
+    badminton_doubles_female: "Badminton Double Female",
     basketball3v3: "Basketball 3v3",
     frisbee5v5: "Frisbee 5v5",
+    volleyball: "Volleyball",
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -119,24 +147,54 @@ async function loadAllTeams() {
 
 function setupTabHandlers() {
     const tabButtons = document.querySelectorAll(".tab-button");
+    const badmintonSubtabs = document.querySelectorAll(".badminton-subtab");
+    const badmintonSubtabsWrap = document.getElementById("badminton-subtabs");
+
+    const activate = (arr, activeEl, className = "active") => {
+        arr.forEach((el) => el.classList.remove(className));
+        activeEl?.classList.add(className);
+    };
+
+    const applyFilter = (eventId) => {
+        currentFilter = eventId;
+        const filteredTeams =
+            eventId === "all"
+                ? allTeams
+                : allTeams.filter((team) => team.event_id === eventId);
+        displayTeams(filteredTeams);
+    };
 
     tabButtons.forEach((button) => {
         button.addEventListener("click", () => {
-            // Update active tab
-            tabButtons.forEach((btn) => btn.classList.remove("active"));
-            button.classList.add("active");
-
-            // Get filter value
             const eventId = button.id.replace("tab-", "");
-            currentFilter = eventId;
 
-            // Filter and display teams
-            const filteredTeams =
-                eventId === "all"
-                    ? allTeams
-                    : allTeams.filter((team) => team.event_id === eventId);
+            activate(tabButtons, button);
 
-            displayTeams(filteredTeams);
+            if (eventId === "badminton") {
+                badmintonSubtabsWrap?.classList.remove("hidden");
+                const activeSub = document.getElementById(
+                    `tab-${currentBadmintonSubFilter}`
+                );
+                activate(badmintonSubtabs, activeSub, "active-subtab");
+                applyFilter(currentBadmintonSubFilter);
+                return;
+            }
+
+            badmintonSubtabsWrap?.classList.add("hidden");
+            applyFilter(eventId);
+        });
+    });
+
+    badmintonSubtabs.forEach((subtabBtn) => {
+        subtabBtn.addEventListener("click", () => {
+            const subEventId = subtabBtn.id.replace("tab-", "");
+            currentBadmintonSubFilter = subEventId;
+            activate(badmintonSubtabs, subtabBtn, "active-subtab");
+
+            const badmintonTop = document.getElementById("tab-badminton");
+            if (badmintonTop?.classList.contains("active")) {
+                applyFilter(subEventId);
+            }
         });
     });
 }
@@ -163,20 +221,20 @@ function createTeamCard(team) {
     // Extract player names
     let playersHtml = "";
     if (team.member_names && team.member_names.length > 0) {
-        playersHtml = team.member_names
+        const names = team.member_names.map((value) =>
+            resolveDisplayName(value)
+        );
+        playersHtml = names
             .map(
                 (name) =>
                     `<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm mr-1 mb-1">${name}</span>`
             )
             .join("");
     } else if (team.member_emails && team.member_emails.length > 0) {
-        // Use full names from users map when available, fallback to email prefix
-        const names = team.member_emails.map((email) => {
-            const key = (email || "").toLowerCase();
-            if (emailToName[key]) return emailToName[key];
-            const username = email.split("@")[0];
-            return username.charAt(0).toUpperCase() + username.slice(1);
-        });
+        // Convert emails to full names when available.
+        const names = team.member_emails.map((value) =>
+            resolveDisplayName(value)
+        );
         playersHtml = names.map(
             (name) => `<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm mr-1 mb-1">${name}</span>`
         ).join("");
@@ -235,6 +293,12 @@ style.textContent = `
     .tab-button.active {
         color: #2563eb;
         background: #dbeafe;
+        font-weight: 600;
+    }
+    .badminton-subtab.active-subtab {
+        color: #2563eb;
+        border-color: #2563eb;
+        background: #eff6ff;
         font-weight: 600;
     }
 `;

@@ -1,40 +1,47 @@
 team_id,event_id,team_name,member_emails
-badminton_singles__SB1,badminton_singles,Yang Mu,231669h@student.hci.edu.sg
-badminton_singles__SB2,badminton_singles,Lin Chuhan ,linchuhan2@gmail.com
-badminton_singles__SB3,badminton_singles,Ong Yu Tong,debbieongyutong@gmail.com
-badminton_singles__SB4,badminton_singles,Chang Jia Ying,jiaying7267@gmail.com
-badminton_singles__SB5,badminton_singles,Bambang,bambanghardjo@gmail.com
-badminton_singles__SD1,badminton_singles,Emilie Lee Kai Jia,emilie_lee_kai_jia@students.edu.sg
-badminton_singles__SD2,badminton_singles,Queen Abrielle Santosa,queenabrielle.s@gmail.com
-badminton_singles__SD3,badminton_singles,Lim Geng Yang,arealme2011@gmail.com
-badminton_singles__SD4,badminton_singles,Tie Khay Lin,selinalavender2442@gmail.com
-badminton_singles__SD5,badminton_singles,Hu Bang Zhen,jaydenhu606@gmail.com
-badminton_doubles__DA1,badminton_doubles,6'7 Smashers,limchuanzen11@gmail.com;heejinwei7@gmail.com
-badminton_doubles__DA2,badminton_doubles,Oracle Red Bull Racing,justinyeoh18@gmail.com;toh_ky_shen@students.edu.sg
-badminton_doubles__DA3,badminton_doubles,Shuttleshock,jeaniceog@gmail.com;lathithaonguyen28@gmail.com
-badminton_doubles__DA4,badminton_doubles,Brr Brr Patapim,chandarrel@gmail.com;skywolf8998@gmail.com
-badminton_doubles__DA5,badminton_doubles,A6L,211635b@student.hci.edu.sg;bryanczb@gmail.com
-badminton_doubles__DA6,badminton_doubles,F505, melvinvcbc7@gmail.com;202161y@student.hci.edu.sg
-badminton_doubles__DO1,badminton_doubles,Elite Barbarians,jingyitay752@gmail.com;guinness978922@gmail.com
-badminton_doubles__DO2,badminton_doubles,Lazette,nj.basa09@gmail.com;valerianocmicah@gmail.com
-badminton_doubles__DO3,badminton_doubles,Pizzahut,seow_jiaxuan@students.edu.sg;nicoleooilinyen@gmail.com
-badminton_doubles__DO4,badminton_doubles,Catz,jyuhawkliow@gmail.com;matthewdarryll10@gmail.com
-badminton_doubles__DO5,badminton_doubles,Ooga Booga,minhkhang.mike@gmail.com;matthzimra@gmail.com
-badminton_doubles__DO6,badminton_doubles,Wario & Waluigi,jovan.the09@gmail.com;sutowo.ignacio@gmail.com
-frisbee5v5__A1,frisbee5v5,All Yellows,limchuanzen11@gmail.com;jt3x2022@gmail.com;jadenhowk@gmail.com;heejinwei7@gmail.com;xingfaychew@gmail.com;toh_ky_shen@students.edu.sg;chuawave@gmail.com
-frisbee5v5__A2,frisbee5v5,MCD,oscartay0815@gmail.com;andartha_bunarto@students.edu.sg;emilie_lee_kai_jia@students.edu.sg;emma_chye_xin_yi_2028@mgs.sch.edu.sg;253858e@student.hci.edu.sg;panyapong_tankuranun@students.edu.sg;phamsonquan200@gmail.com
-frisbee5v5__A3,frisbee5v5,Umbros,melvinvcbc7@gmail.com;0723yujinglim@gmail.com;ynzysooyz@gmail.com;cedrictaihonge@gmail.com;annayws2121@gmail.com;jaydenhu606@gmail.com;241719x@student.hci.edu.sg
-frisbee5v5__A4,frisbee5v5,Uncle Kim,jingyitay752@gmail.com;chandarrel@gmail.com;202161y@student.hci.edu.sg;wahkong.ng@gmail.com;202332u@student.hci.edu.sg;qiuyuekimyauyue@gmail.com
-frisbee5v5__A5,frisbee5v5,Aura Farmers,nicoleooilinyen@gmail.com;minhkhang.mike@gmail.com;xuelei0701@gmail.com;sutowo.ignacio@gmail.com;soon.ying.jin@gmail.com;awzhihui@gmail.com; turkeyflex6@gmail.com
-frisbee5v5__A6,frisbee5v5,Samboarders,shantivaleriewijaya@gmail.com;seow_jiaxuan@students.edu.sg;samrobbie.barrera@gmail.com;ngxinyu509@gmail.com;tanjkethan@gmail.com;braydenarato@gmail.com;matthewdarryll10@gmail.com
-frisbee5v5__A7,frisbee5v5,Ultimate YI,matthewlinsuryanto@gmail.com;nguyendaiduong2008hp@gmail.com;ducbn1404@gmail.com;linhanhams0301@gmail.com;bambanghardjo@gmail.com;zbtn8297@gmail.com
-basketball3v3__A1,basketball3v3,Let's Goh,chandarrel@gmail.com;liowks0107@gmail.com;202253Y@student.hci.edu.sg
-basketball3v3__A2,basketball3v3,Bpians,lucas_chia_meng_jun@students.edu.sg;2022_wang_ling_xuan@nygh.edu.sg;awzhihui@gmail.com
-basketball3v3__A3,basketball3v3,G1Squad,tonbabsesthapiyanon@gmail.com;petroleumedwards@gmail.com;christopherang222@gmail.com
-basketball3v3__A4,basketball3v3,The Shawties,qiqicool7788@gmail.com;lian_lifang@students.edu.sg;emilie_lee_kai_jia@students.edu.sg;tanleeanne4@gmail.com;zong_keren@students.edu.sg
-basketball3v3__A5,basketball3v3,The J1zz Team,211537b@student.hci.edu.sg;212085m@student.hci.edu.sg;matthewlinsuryanto@gmail.com
-basketball3v3__B1,basketball3v3,Short Kings,ic3dl3mont3a@gmail.com;ng.justin1301@gmail.com;chawinnapaumporn10@gmail.com
-basketball3v3__B2,basketball3v3,6'7 Hoopers,heejinwei7@gmail.com;chuawave@gmail.com;limzenjie@gmail.com
-basketball3v3__B3,basketball3v3,Young NJs,braydenarato@gmail.com;latuan1790@gmail.com;dunkersamuelyang63@gmail.com
-basketball3v3__B4,basketball3v3,LePookies,toh_ky_shen@students.edu.sg;231669h@student.hci.edu.sg;jadenhowk@gmail.com
-basketball3v3__B5,basketball3v3,Nonchalant,202161y@student.hci.edu.sg;limchuanzen11@gmail.com;202332u@student.hci.edu.sg
+SM1,badminton_singles_male,ZHU LINGCHENG,18262292783@163.com
+SM3,badminton_singles_male,VU HOANG BACH,vuhoangbach19072010@gmail.com
+SM5,badminton_singles_male,CONAN KENZIE TAY,conankenzie4@gmail.com
+SM6,badminton_singles_male,WILLIAM JORDAN,williamjordansgu09@gmail.com
+SM4,badminton_singles_male,HU BANG ZHEN,212085m@student.hci.edu.sg
+SM2,badminton_singles_male,SONG QIAN,241985w@student.hci.edu.sg
+SF1,badminton_singles_female,SORNJITTI PREMYUDA,premyuda.sornjitti@gmail.com
+SF2,badminton_singles_female,CHU VI ANH (LENKA),lenkachu0509@gmail.com
+SF3,badminton_singles_female,CHEN KEXIN,2426597909@qq.com
+SF4,badminton_singles_female,EMILIE LEE KAI JIA,emilie_lee_kai_jia@students.edu.sg
+DMA1,badminton_doubles_male,Bagoons,timothym1118@gmail.com;tranhieukhoa@gmail.com
+DMA3,badminton_doubles_male,Birdie Blasters,heejinwei7@gmail.com;limchuanzen11@gmail.com
+DMA4,badminton_doubles_male,Debrief,yaphanyang09@gmail.com;abeleng24@gmail.com
+DMA2,badminton_doubles_male,Geng Yang and Ky Shen,arealme2011@gmail.com;231323J@student.hci.edu.sg
+DMB1,badminton_doubles_male,Tuff Guys,mrywtan@gmail.com;261469e@student.hci.edu.sg
+DMB3,badminton_doubles_male,Please be kind to us,li_guanghua@students.edu.sg;evantysy@gmail.com
+DMB4,badminton_doubles_male,Branheng,brandon_kandijani@students.edu.sg;howhengloh@gmail.com
+DMB2,badminton_doubles_male,Side Quest,gaiyicheng4@gmail.com;212085m@student.hci.edu.sg
+DF5,badminton_doubles_female,apple π =3.14159265,karphe2401@gmail.com;chujiaxuan28@gmail.com
+DF4,badminton_doubles_female,love all play,trinity_faith_leong_xinzhen@students.edu.sg;joannetanyien@gmail.com
+DF1,badminton_doubles_female,JJ Siwas,jordyn_tan_teng_hwee@student.edu.sg;jlloh.my@gmail.com
+DF3,badminton_doubles_female,Jollilamak Smash Combo™,valerianocmicah@gmail.com;chaoxinshan@gmail.com
+DF2,badminton_doubles_female,杀杀,tanyt.daphne@gmail.com;kaylachinyix@gmail.com
+BA5,basketball3v3,Planet,18262292783@163.com;jingzheshao877@gmail.com;tu.yuanh@stu.hcis.edu.sg;241985w@student.hci.edu.sg;liuelvis1010@gmail.com
+BA1,basketball3v3,BPballers,dallasjuwono@gmail.com;chawinnapaumporn10@gmail.com;bhakinw3@gmail.com;mendel.christensen@gmail.com;241991w@student.hci.edu.sg
+BA3,basketball3v3,Sons,luckatruong229@gmail.com;qtazzanachairoj@gmail.com;christophorus.jonathan@gmail.com;mohgiendren@gmail.com;matthewjayden1889@gmail.com
+BA4,basketball3v3,Brick City Dynasty,heejinwei7@gmail.com;chuawave@gmail.com;jadenhowk@gmail.com;limchuanzen11@gmail.com;231323j@student.hci.edu.sg
+BA2,basketball3v3,Champions,edwardang0505@gmail.com;petroleumedwards@gmail.com;luisvigo2010@gmail.com;josiahliu11@gmail.com;tanpboon@gmail.com
+BB5,basketball3v3,MsianNBA,oscartay0815@gmail.com;arealme2011@gmail.com;andreo_tan_ern_jett@students.edu.sg;raphaellim009@gmail.com;nethantanyufan@gmail.com
+BB1,basketball3v3,Hantam Bola,231479h@student.hci.edu.sg;6883kaisheng@gmail.com;ponkibonkidonki@gmail.com;231548e@student.hci.edu.sg 
+BB3,basketball3v3,Dunkin Donuts,foogesar139@gmail.com;raichuar1@gmail.com;chandarrel@gmail.com;emilie_lee_kai_jia@students.edu.sg;qiuyuekimyauyue@gmail.com
+BB4,basketball3v3,Sausage,dang_viet_khoi@students.edu.sg;zsyangsg@gmail.com;joshualimyk@gmail.com;pham_duy_hai@students.edu.sg
+BB2,basketball3v3,Splash Brothers,guojunnk2@gmail.com;253858e@student.hci.edu.sg;junrenje@gmail.com;mrkeithzijian@gmail.com
+F1,frisbee5v5,67 Musketeers,edwardang0505@gmail.com;253858e@student.hci.edu.sg;mrkeithzijian@gmail.com;arianna.wxy@gmail.com;keryaopang@gmail.com;yihjiehlee@gmail.com
+F2,frisbee5v5,All Yellows,jt3x2022@gmail.com;xingfaychew@gmail.com;limchuanzen11@gmail.com;heejinwei7@gmail.com;231323j@student.hci.edu.sg;jadenhowk@gmail.com;chuawave@gmail.com
+F3,frisbee5v5,Disclexia,shantivaleriewijaya@gmail.com;andarthab@gmail.com;enqikhaw1310@gmail.com;matthewdarryll10@gmail.com;241719x@student.hci.edu.sg;samrobbie.barrera@gmail.com;emilie_lee_kai_jia@students.edu.sg
+F4,frisbee5v5,MCD,oscartay0815@gmail.com;regineee0411@gmail.com;ptankuranun@gmail.com;andreo_tan_ern_jett@students.edu.sg;arealme2011@gmail.com;emma_chye_xin_yi_2028@mgs.sch.edu.sg;phamsonquan2010@gmail.com
+F5,frisbee5v5,Scoober Doo,latuan1790@gmail.com;tanjkethan@gmail.com;rafaelkrisna2128@gmail.com;braydenarato@gmail.com;andrewsunny.tan@gmail.com;chetlosc@gmail.com;anntang966@gmail.com
+F6,frisbee5v5,Watermelon Dolphin,2023_teo_zi_xin_sharnisse@nygh.edu.sg;igybgoated10@gmail.com;2023_wang_anxin@nygh.edu.sg;2023_foo_yu_en_dawn@nygh.edu.sg;2023_lim_jia_xuan@nygh.edu.sg;2023_vera_swee_pei_jun@nygh.edu.sg;2023_vella_lim_xin_en@nygh.edu.sg
+F7,frisbee5v5,uncs,junrenje@gmail.com;chloeliew760@gmail.com;princecpk05@gmail.com;yongkeansheng@gmail.com;ynzysooyz@gmail.com;qiuyuekimyauyue@gmail.com;jaydenhu606@gmail.com
+VA1,volleyball,We love bagels,javier081228@gmail.com;yayanwang392@gmail.com;wangchenyue0111@gmail.com;lea_suyan_chain@students.edu.sg;kang_ziyan@students.edu.sg
+VA2,volleyball,Doomsday Squad,yang_chun_ya@students.edu.sg;windepar.edu@gmail.com;qiqicool7788@gmail.com;fishnuggetchong@gmail.com;hlaingminkyaw255@gmail.com
+VA3,volleyball,Eat Pho,arealme2011@gmail.com;arianna.wxy@gmail.com;limchuanzen11@gmail.com;xingfaychew@gmail.com;231323j@student.hci.edu.sg
+VB1,volleyball,Shanti and Friends,shantivaleriewijaya@gmail.com;andarthab@gmail.com;phamsonquan2010@gmail.com;oscartay0815@gmail.com;christopherang222@gmail.com
+VB2,volleyball,ActiveSG,2023_yin_catherine@nygh.edu.sg;ngzuni@gmail.com;joelyntohtj@gmail.com;2023_lok_hiu_lam@nygh.edu.sg;2023_toh_yu_xuan@nygh.edu.sg
+VB3,volleyball,The Leftovers,graciafaith.ft@gmail.com;adhaya_zaky_aziz_alvaro@students.edu.sg;latuan1790@gmail.com;nathanliewwaikin@gmail.com
