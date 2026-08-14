@@ -538,6 +538,9 @@ function validateMatches(rows, rulesByEvent) {
         const b = norm.str(
             pickFirst(r, ["competitor_b", "team_b", "player_b", "b"])
         );
+        const scorekeeper_email = norm.str(
+            pickFirst(r, ["scorekeeper_email"])
+        );
 
         if (!id) errors.push(`Matches.csv row ${row}: missing id`);
         if (id && seenId.has(id))
@@ -594,6 +597,7 @@ function validateMatches(rows, rulesByEvent) {
             ...(pool ? { pool } : {}),
             competitor_a: a ? { id: a } : null,
             competitor_b: b ? { id: b } : null,
+            scorekeeper_email: scorekeeper_email || null,
         });
     });
 
@@ -1140,6 +1144,7 @@ els.btnImportMatches?.addEventListener("click", async () => {
                 venue: m.venue || null,
                 scheduled_at: m.scheduled_at,
                 match_type: m.match_type,
+                scorekeeper_email: m.scorekeeper_email || null,
                 ...(m.pool ? { pool: m.pool } : {}),
             };
             batch.set(doc(db, "matches", m.id), payload, { merge: true });
