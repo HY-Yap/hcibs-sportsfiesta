@@ -1,1171 +1,1750 @@
 /*  Cloud Functions for Sports Fiesta
     ---------------------------------
-    • propagateDelay – shift later matches if one starts late
-    • autoFillAwards – auto-populate awards/{sport} when series are decided
+    Match progression:
+    
+    QUALIFIERS
+        ↓
+    SEMIS (if applicable)
+        ↓
+    BRONZE + FINAL
+        ↓
+    AWARDS
+
+    IMPORTANT:
+    - Match document IDs and competitor placeholder IDs are different.
+    - Elimination matches are initially hidden using status: "void".
+    - Placeholder competitor IDs remain in those hidden documents.
+    - Once the previous round is complete, only the next round is revealed.
 */
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
+
 const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
 
-/* ───────── propagateDelay (unchanged) ───────── */
-exports.propagateDelay = functions.firestore
-    .document("matches/{matchId}")
-    .onUpdate(async (chg, _) => {
-        const before = chg.before.data(),
-            after = chg.after.data();
-        if (before.status !== "scheduled" || after.status !== "live")
-            return null;
 
-        const delay =
-            after.actual_start.toMillis() - after.scheduled_at.toMillis();
-        if (delay <= 0) return null;
+/* ============================================================
+   1. EVENT CONFIGURATION
+   ============================================================ */
 
-        const later = await db
-            .collection("matches")
-            .where("event_id", "==", after.event_id)
-            .where("venue", "==", after.venue)
-            .where("scheduled_at", ">", after.scheduled_at)
-            .get();
+/*
+    Structure:
 
-        const batch = db.batch();
-        later.forEach((doc) => {
-            const newTS = new admin.firestore.Timestamp(
-                doc.data().scheduled_at.toMillis() / 1000 + delay / 1000,
-                0
-            );
-            batch.update(doc.ref, { scheduled_at: newTS });
-        });
+    match IDs:
+      semis
+      bronze
+      finals
 
-        console.log(
-            `⏩ shifted ${later.size} matches on ${after.venue} by ${
-                delay / 60000
-            } min`
-        );
-        return batch.commit();
-    });
+    placeholders:
+      competitors used before actual teams are known
 
-/* ───────── auto-fill awards for different sports ───────── */
+    groups:
+      number of qualifier groups
 
-/**
- * Event Format Configuration
- *
- * CURRENT SPORTS (implemented):
- * - badminton_singles: S-F1, S-F2, S-F3 (finals) + S-B1, S-B2, S-B3 (bronze) - Best of 3
- * - badminton_doubles: D-F1, D-F2, D-F3 (finals) + D-B1, D-B2, D-B3 (bronze) - Best of 3
- *
- * FUTURE SPORTS (add when confirmed):
- * To add a new sport, update EVENT_FORMATS with:
- * - type: "bo3" (best of 3), "bo5" (best of 5), "single" (one match only)
- * - prefix: match ID prefix (e.g., "FB" for football)
- * - finals: array of final match suffixes
- * - bronze: array of bronze match suffixes
- *
- * Examples for future sports:
- * - frisbee: { type: "single", prefix: "FR", finals: ["FINAL"], bronze: ["BRONZE"] }
- * - volleyball: { type: "bo5", prefix: "V", finals: ["F1", "F2", "F3", "F4", "F5"], bronze: ["B1", "B2", "B3", "B4", "B5"] }
- * - football: { type: "single", prefix: "FB", finals: ["FINAL"], bronze: ["BRONZE"] }
- * - basketball: { type: "bo3", prefix: "BB", finals: ["F1", "F2", "F3"], bronze: ["B1", "B2", "B3"] }
- */
+    showThird:
+      whether a bronze match is required
+*/
+
 const EVENT_FORMATS = {
-    badminton_singles: {
-        type: "bo3",
-        prefix: "S",
-        finals: ["F1", "F2", "F3"],
-        bronze: ["B1", "B2", "B3"],
-    },
-    badminton_doubles: {
-        type: "bo3",
-        prefix: "D",
-        finals: ["F1", "F2", "F3"],
-        bronze: ["B1", "B2", "B3"],
-    },
+
+    /* --------------------------------------------------------
+       BASKETBALL 3v3
+       -------------------------------------------------------- */
+
     basketball3v3: {
-        type: "single",
-        prefix: "B",
-        finals: ["F1"],
-        bronze: ["B1"],
+        groups: 2,
+        hasSemis: true,
+        showThird: true,
+
+        semis: [
+            "B-SF1",
+            "B-SF2"
+        ],
+
+        bronze: [
+            "B-B1"
+        ],
+
+        finals: [
+            "B-F1"
+        ],
+
+        semiPlaceholders: [
+            ["BQF1W", "BQF4W"],
+            ["BQF2W", "BQF3W"]
+        ],
+
+        bronzePlaceholders: ["BSF1L", "BSF2L"],
+        finalPlaceholders: ["BSF1W", "BSF2W"]
     },
+
+
+    /* --------------------------------------------------------
+       BADMINTON MEN'S SINGLES
+       -------------------------------------------------------- */
+
+    badminton_singles_male: {
+        groups: 2,
+        hasSemis: true,
+        showThird: true,
+
+        semis: [
+            "SM-SF1",
+            "SM-SF2"
+        ],
+
+        bronze: [
+            "SM-B1"
+        ],
+
+        finals: [
+            "SM-F1"
+        ],
+
+        /*
+          Placeholder competitors:
+            SMSF1
+            SMSF2
+            SMSF3
+            SMSF4
+
+          SMB1 / SMB2
+          SMF1 / SMF2
+        */
+
+        semiPlaceholders: [
+            ["SMSF1", "SMSF4"],
+            ["SMSF2", "SMSF3"]
+        ],
+
+        bronzePlaceholders: ["SMB1", "SMB2"],
+        finalPlaceholders: ["SMF1", "SMF2"]
+    },
+
+
+    /* --------------------------------------------------------
+       BADMINTON MEN'S DOUBLES
+       -------------------------------------------------------- */
+
+    badminton_doubles_male: {
+        groups: 2,
+        hasSemis: true,
+        showThird: true,
+
+        semis: [
+            "DM-SF1",
+            "DM-SF2"
+        ],
+
+        bronze: [
+            "DM-B1"
+        ],
+
+        finals: [
+            "DM-F1"
+        ],
+
+        /*
+          SDSF1
+          SDSF2
+          SDSF3
+          SDSF4
+
+          SDB1 / SDB2
+          SDF1 / SDF2
+        */
+
+        semiPlaceholders: [
+            ["SDSF1", "SDSF4"],
+            ["SDSF2", "SDSF3"]
+        ],
+
+        bronzePlaceholders: ["SDB1", "SDB2"],
+        finalPlaceholders: ["SDF1", "SDF2"]
+    },
+
+
+    /* --------------------------------------------------------
+       BADMINTON WOMEN'S SINGLES
+       -------------------------------------------------------- */
+
+    badminton_singles_female: {
+        groups: 2,
+        hasSemis: false,
+        showThird: false,
+
+        semis: [],
+
+        bronze: [],
+
+        finals: [
+            "SF-F1"
+        ],
+
+        /*
+          Only 1st and 2nd are needed.
+          No bronze.
+
+          SFF1
+          SFF2
+        */
+
+        finalPlaceholders: ["SFF1", "SFF2"]
+    },
+
+
+    /* --------------------------------------------------------
+       BADMINTON WOMEN'S DOUBLES
+       -------------------------------------------------------- */
+
+    badminton_doubles_female: {
+        groups: 2,
+        hasSemis: false,
+        showThird: false,
+
+        semis: [],
+
+        bronze: [],
+
+        finals: [
+            "DF-F1"
+        ],
+
+        /*
+          DFF1
+          DFF2
+        */
+
+        finalPlaceholders: ["DFF1", "DFF2"]
+    },
+
+
+    /* --------------------------------------------------------
+       VOLLEYBALL
+       -------------------------------------------------------- */
+
+    volleyball: {
+        groups: 2,
+        hasSemis: true,
+        showThird: true,
+
+        semis: [
+            "V-SF1",
+            "V-SF2"
+        ],
+
+        bronze: [
+            "V-B1"
+        ],
+
+        finals: [
+            "V-F1"
+        ],
+
+        /*
+          VSF1
+          VSF2
+          VSF3
+          VSF4
+
+          VBF1 / VBF2
+          VF1 / VF2
+        */
+
+        semiPlaceholders: [
+            ["VSF1", "VSF4"],
+            ["VSF2", "VSF3"]
+        ],
+
+        bronzePlaceholders: ["VBF1", "VBF2"],
+        finalPlaceholders: ["VF1", "VF2"]
+    },
+
+
+    /* --------------------------------------------------------
+       FRISBEE 5v5
+       -------------------------------------------------------- */
+
     frisbee5v5: {
-        type: "single",
-        prefix: "F",
-        finals: ["F1"],
-        bronze: ["B1"],
-    },
+        groups: 2,
+        hasSemis: true,
+        showThird: true,
+
+        semis: [
+            "F-SF1",
+            "F-SF2"
+        ],
+
+        bronze: [
+            "F-B1"
+        ],
+
+        finals: [
+            "F-F1"
+        ],
+
+        /*
+          FSF1
+          FSF2
+          FSF3
+          FSF4
+
+          FB1 / FB2
+          FF1 / FF2
+        */
+
+        semiPlaceholders: [
+            ["FSF1", "FSF4"],
+            ["FSF2", "FSF3"]
+        ],
+
+        bronzePlaceholders: ["FB1", "FB2"],
+        finalPlaceholders: ["FF1", "FF2"]
+    }
 };
 
-/**
- * Helper function to determine if a series is decided and who won
- * @param {string} eventId - The event ID (e.g., "badminton_singles")
- * @param {string} seriesType - Either "finals" or "bronze"
- * @returns {Promise<{decided: boolean, winnerRef?: object, loserRef?: object}>}
- */
-async function seriesState(eventId, seriesType) {
-    const config = EVENT_FORMATS[eventId];
-    if (!config) return { decided: false }; // unsupported event
 
-    const matchIds = seriesType === "finals" ? config.finals : config.bronze;
-    const fullMatchIds = matchIds.map((id) => `${config.prefix}-${id}`);
+/* ============================================================
+   2. GENERAL HELPERS
+   ============================================================ */
 
-    console.log(`🔍 Querying for matches:`, fullMatchIds);
-
-    // Query all matches in this series
-    const snap = await db
-        .collection("matches")
-        .where("event_id", "==", eventId)
-        .where(admin.firestore.FieldPath.documentId(), "in", fullMatchIds)
-        .get();
-
-    console.log(`🔍 Found ${snap.size} matches for ${eventId} ${seriesType}`);
-
-    if (config.type === "single") {
-        // Single match format - just check if the match is final
-        const match = snap.docs[0];
-        if (!match || match.data().status !== "final") {
-            return { decided: false };
-        }
-
-        const d = match.data();
-        const refWinner =
-            d.score_a > d.score_b ? d.competitor_a : d.competitor_b;
-        const refLoser =
-            d.score_a > d.score_b ? d.competitor_b : d.competitor_a;
-
-        return { decided: true, winnerRef: refWinner, loserRef: refLoser };
-    } else if (config.type === "bo3") {
-        // Best-of-3 format - need 2 wins to decide
-        return checkBestOfSeries(snap, 2);
-    } else if (config.type === "bo5") {
-        // Best-of-5 format - need 3 wins to decide
-        return checkBestOfSeries(snap, 3);
-    }
-
-    return { decided: false };
+function getConfig(eventId) {
+    return EVENT_FORMATS[eventId] || null;
 }
 
-/**
- * Helper function for best-of-X series logic
- * @param {QuerySnapshot} snap - Firestore query snapshot of matches
- * @param {number} winsNeeded - Number of wins needed to decide series
- * @returns {{decided: boolean, winnerRef?: object, loserRef?: object}}
- */
-function checkBestOfSeries(snap, winsNeeded) {
-    const wins = {}; // {teamId: winCount}
-    const allTeams = new Set(); // Track all participating teams
 
-    console.log(`🔍 Checking series: found ${snap.size} matches`);
-
-    snap.forEach((doc) => {
-        const d = doc.data();
-        console.log(`🔍 Match ${doc.id}:`, {
-            status: d.status,
-            score_a: d.score_a,
-            score_b: d.score_b,
-            competitor_a_id: d.competitor_a?.id,
-            competitor_b_id: d.competitor_b?.id,
-        });
-
-        if (d.status !== "final") return; // ignore unfinished games
-
-        const aId = d.competitor_a.id;
-        const bId = d.competitor_b.id;
-
-        // Track all teams that participated
-        allTeams.add(aId);
-        allTeams.add(bId);
-
-        // Handle tie case (though rare in badminton)
-        if (d.score_a === d.score_b) {
-            console.warn(
-                `Tie detected in match ${doc.id}: ${d.score_a}-${d.score_b}`
-            );
-            return;
-        }
-
-        const winner = d.score_a > d.score_b ? aId : bId;
-        wins[winner] = (wins[winner] || 0) + 1;
-
-        console.log(`🔍 Winner of ${doc.id}: ${winner}, current wins:`, wins);
-    });
-
-    console.log(`🔍 Final win counts:`, wins);
-    console.log(`🔍 Wins needed: ${winsNeeded}`);
-    console.log(`🔍 All participating teams:`, Array.from(allTeams));
-
-    // Check if any team has enough wins to decide the series
-    const teams = Array.from(allTeams);
-    if (teams.length < 2) {
-        console.log(
-            `🔍 Not enough different teams (${teams.length}), returning false`
-        );
-        return { decided: false };
+function getWinner(match) {
+    if (
+        typeof match.score_a !== "number" ||
+        typeof match.score_b !== "number"
+    ) {
+        return null;
     }
 
-    // Find the team with the most wins
-    let maxWins = 0;
-    let winnerTeam = null;
-    for (const team of teams) {
-        const teamWins = wins[team] || 0;
-        if (teamWins > maxWins) {
-            maxWins = teamWins;
-            winnerTeam = team;
-        }
+    if (match.score_a === match.score_b) {
+        return null;
     }
 
-    console.log(`🔍 Max wins: ${maxWins} by team: ${winnerTeam}`);
-
-    if (maxWins >= winsNeeded) {
-        console.log(
-            `🔍 Series decided! ${winnerTeam} has >= ${winsNeeded} wins`
-        );
-
-        // Find the loser (the other team)
-        const loserTeam = teams.find((team) => team !== winnerTeam);
-
-        // Get full competitor refs from any finished match
-        const anyDoc = snap.docs.find((d) => d.data().status === "final");
-        if (!anyDoc) return { decided: false };
-
-        const matchData = anyDoc.data();
-        const refWinner = [matchData.competitor_a, matchData.competitor_b].find(
-            (c) => c.id === winnerTeam
-        );
-        const refLoser = [matchData.competitor_a, matchData.competitor_b].find(
-            (c) => c.id === loserTeam
-        );
-
-        return { decided: true, winnerRef: refWinner, loserRef: refLoser };
-    } else {
-        console.log(
-            `🔍 Series not decided, no team has ${winsNeeded} wins yet`
-        );
-    }
-
-    return { decided: false };
+    return match.score_a > match.score_b
+        ? match.competitor_a?.id
+        : match.competitor_b?.id;
 }
 
-/**
- * Cloud Function that automatically fills awards when finals/bronze series are completed
- *
- * HOW TO ADD NEW SPORTS:
- * 1. Add the sport configuration to EVENT_FORMATS above
- * 2. Deploy the function
- * 3. The function will automatically handle the new sport based on its configuration
- *
- * AWARDS STRUCTURE:
- * - Finals winner → champion
- * - Finals loser → first_runner_up
- * - Bronze winner → second_runner_up
- */
-exports.autoFillAwards = functions.firestore
-    .document("matches/{matchId}")
-    .onUpdate(async (change, context) => {
-        const before = change.before.data();
-        const after = change.after.data();
 
-        // Only trigger when a match changes from "live" to "final"
-        if (!(before.status === "live" && after.status === "final")) {
-            return null;
-        }
-
-        const sport = after.event_id;
-        const gameID = context.params.matchId;
-
-        // Check if this event is configured
-        const config = EVENT_FORMATS[sport];
-        if (!config) {
-            console.log(`Event ${sport} not configured for auto-awards`);
-            return null;
-        }
-
-        // Parse match ID based on event format (e.g., "D-F1" -> ["D", "F1"])
-        const parts = gameID.split("-");
-        if (parts.length !== 2 || parts[0] !== config.prefix) {
-            return null; // not a match we care about
-        }
-
-        const matchSuffix = parts[1]; // "F1", "FINAL", "BRONZE", etc.
-
-        // Determine if this is finals or bronze match
-        let seriesType = null;
-        if (config.finals.includes(matchSuffix)) {
-            seriesType = "finals";
-        } else if (config.bronze.includes(matchSuffix)) {
-            seriesType = "bronze";
-        } else {
-            return null; // not a finals/bronze match
-        }
-
-        console.log(`🏆 Processing ${sport} ${seriesType} match: ${gameID}`);
-
-        try {
-            // Handle single-game vs series formats differently
-            if (config.type === "single") {
-                // Single-game format: this match result IS the series result
-                const aId = after.competitor_a?.id;
-                const bId = after.competitor_b?.id;
-
-                if (
-                    !aId ||
-                    !bId ||
-                    typeof after.score_a !== "number" ||
-                    typeof after.score_b !== "number"
-                ) {
-                    console.log(`❌ Invalid match data for ${gameID}`);
-                    return null;
-                }
-
-                const winnerId = after.score_a > after.score_b ? aId : bId;
-                const loserId = winnerId === aId ? bId : aId;
-
-                const winnerRef = { id: winnerId };
-                const loserRef = { id: loserId };
-
-                // Build the awards object based on match type
-                const awardSlots =
-                    seriesType === "finals"
-                        ? {
-                              champion: winnerRef,
-                              first_runner_up: loserRef,
-                          }
-                        : {
-                              second_runner_up: winnerRef,
-                          };
-
-                // Update the awards document
-                await db.doc(`awards/${sport}`).set(
-                    {
-                        ...awardSlots,
-                        updated_at: FieldValue.serverTimestamp(),
-                        published: false,
-                    },
-                    { merge: true }
-                );
-
-                console.log(
-                    `✅ [autoFillAwards] ${sport} – ${seriesType} single match decided, awards updated`
-                );
-            } else {
-                // Series format (bo3, bo5): check if the series is now decided
-                const series = await seriesState(sport, seriesType);
-                if (!series.decided) {
-                    console.log(
-                        `${sport} ${seriesType} series not yet decided`
-                    );
-                    return null;
-                }
-
-                // Build the awards object based on series type
-                const awardSlots =
-                    seriesType === "finals"
-                        ? {
-                              champion: series.winnerRef,
-                              first_runner_up: series.loserRef,
-                          }
-                        : {
-                              second_runner_up: series.winnerRef,
-                          };
-
-                // Update the awards document
-                await db.doc(`awards/${sport}`).set(
-                    {
-                        ...awardSlots,
-                        updated_at: FieldValue.serverTimestamp(),
-                        published: false,
-                    },
-                    { merge: true }
-                );
-
-                console.log(
-                    `✅ [autoFillAwards] ${sport} – ${seriesType} series decided, awards updated`
-                );
-            }
-        } catch (error) {
-            console.error(
-                `❌ [autoFillAwards] Error processing ${sport} ${seriesType}:`,
-                error
-            );
-            throw error; // Re-throw to trigger Cloud Functions retry
-        }
-
+function getLoser(match) {
+    if (
+        typeof match.score_a !== "number" ||
+        typeof match.score_b !== "number"
+    ) {
         return null;
-    });
+    }
 
-/* ───────── publishAwards – set published:true when all slots filled ───────── */
-exports.publishAwards = functions.firestore
-    .document("awards/{eventId}")
-    .onWrite(async (change, ctx) => {
-        const after = change.after.exists ? change.after.data() : null;
-        if (!after || after.published) return null; // already public
-
-        const ready =
-            after.champion && after.first_runner_up && after.second_runner_up;
-
-        if (!ready) return null;
-
-        await change.after.ref.update({
-            published: true,
-            published_at: FieldValue.serverTimestamp(),
-        });
-
-        console.log(`🏅 Awards for ${ctx.params.eventId} published`);
+    if (match.score_a === match.score_b) {
         return null;
-    });
+    }
 
-/* ───────── revealSemis (badminton) – generate SF brackets when all qualifiers are done ─────────
-   Flow:
-   1. Fires on any qualifier going live ➜ final.
-   2. Checks if *every* qualifier in the same event is now final.
-   3. Builds standings per pool (A / B) using:      wins ➜ point-diff.
-   4. Determines seeds 1–4 and writes them into the pre-seeded SF placeholders:
-        Bracket 1  ➜  #1 vs #4     (SF1-1, SF1-2, …)
-        Bracket 2  ➜  #2 vs #3     (SF2-1, SF2-2, …)
-   5. Only runs once – if semis already have real team IDs we skip.
-   Tie-breaker reference is copied here for visibility.
+    return match.score_a > match.score_b
+        ? match.competitor_b?.id
+        : match.competitor_a?.id;
+}
+
+
+function isFinalMatch(match) {
+    return match && match.status === "final";
+}
+
+
+/*
+   Hidden elimination matches use:
+       status: "void"
+
+   They become:
+       status: "scheduled"
+
+   when they are actually revealed.
 */
-exports.revealSemis = functions.firestore
-    .document("matches/{matchId}")
-    .onUpdate(async (chg, ctx) => {
-        const before = chg.before.data();
-        const after = chg.after.data();
+async function hideMatches(matchIds, placeholders = []) {
+    const batch = db.batch();
 
-        /* Trigger only when a *qualifier* flips live ➜ final */
-        if (!(before.status === "live" && after.status === "final"))
-            return null;
-        if (!after.match_type || after.match_type !== "qualifier") return null;
+    for (let i = 0; i < matchIds.length; i++) {
+        const ref = db.doc(`matches/${matchIds[i]}`);
+        const snap = await ref.get();
 
-        const eventId = after.event_id;
-        console.log(`🏁 Qualifier finished in ${eventId}:`, ctx.params.matchId);
-
-        /* 1️⃣ — get ALL qualifiers for this event */
-        const qualsSnap = await db
-            .collection("matches")
-            .where("event_id", "==", eventId)
-            .where("match_type", "==", "qualifier")
-            .get();
-
-        /* Abort if some qualifiers still live/scheduled */
-        const unfinished = qualsSnap.docs.filter(
-            (d) => d.data().status !== "final"
-        );
-        if (unfinished.length) {
-            console.log(
-                `⏳ Not all qualifiers done – ${unfinished.length} remain`
-            );
-            return null;
+        if (!snap.exists) {
+            console.warn(`⚠️ Missing match document ${matchIds[i]}`);
+            continue;
         }
 
-        /* 2️⃣ — build standings per pool */
-        const pools = {}; // e.g. { A: { teamId: {W,DIF}}, B:{…} }
-        for (const doc of qualsSnap.docs) {
-            const d = doc.data();
-            const pool = d.pool || "A"; // default safety
-            pools[pool] ??= {};
-            const a = d.competitor_a.id,
-                b = d.competitor_b.id;
-            const sa = d.score_a,
-                sb = d.score_b;
-
-            /* Update helper */
-            const upd = (id, win, diff) => {
-                const t = pools[pool][id] ?? { wins: 0, diff: 0 };
-                t.wins += win;
-                t.diff += diff;
-                pools[pool][id] = t;
-            };
-
-            if (sa > sb) {
-                upd(a, 1, sa - sb);
-                upd(b, 0, sb - sa);
-            } else if (sb > sa) {
-                upd(b, 1, sb - sa);
-                upd(a, 0, sa - sb);
-            } else {
-                upd(a, 0, 0);
-                upd(b, 0, 0);
-            } // tie unlikely
-        }
-
-        /* 3️⃣ — sort pools & pick seeds */
-        const rank = (poolObj) =>
-            Object.entries(poolObj)
-                .sort(([, A], [, B]) => B.wins - A.wins || B.diff - A.diff)
-                .map(([id]) => id);
-
-        const topA = rank(pools["A"]).slice(0, 2); // [#1A,#2A]
-        const topB = rank(pools["B"]).slice(0, 2); // [#1B,#2B]
-
-        if (topA.length < 2 || topB.length < 2) {
-            console.error("❌ Pool data incomplete, cannot seed semis");
-            return null;
-        }
-
-        /* Seeds: 1=Winner A, 2=Winner B, 3=Runner-up A, 4=Runner-up B */
-        const seed1 = topA[0],
-            seed2 = topB[0],
-            seed3 = topA[1],
-            seed4 = topB[1];
-
-        console.log("🔢 Seeds computed:", { seed1, seed2, seed3, seed4 });
-
-        /* 4️⃣ — write into SF placeholders (only if still placeholders) */
-        const bracket = [
-            {
-                idPrefix: `${EVENT_FORMATS[eventId].prefix}-SF1`,
-                A: seed1,
-                B: seed4,
-                court: "Court 1",
-            },
-            {
-                idPrefix: `${EVENT_FORMATS[eventId].prefix}-SF2`,
-                A: seed2,
-                B: seed3,
-                court: "Court 2",
-            },
-        ];
-
-        const batch = db.batch();
-        for (const { idPrefix, A, B } of bracket) {
-            const firstGame = await db.doc(`matches/${idPrefix}-1`).get();
-            if (!firstGame.exists) {
-                console.error(`❌ Missing doc ${idPrefix}-1`);
-                continue;
-            }
-            const data = firstGame.data();
-            if (data.competitor_a?.id === A && data.competitor_b?.id === B) {
-                console.log(`↪️  Semis already seeded (${idPrefix}), skipping`);
-                continue; // already real teams
-            }
-            // update all three games in the series
-            for (let g = 1; g <= 3; g++) {
-                batch.update(db.doc(`matches/${idPrefix}-${g}`), {
-                    competitor_a: { id: A },
-                    competitor_b: { id: B },
-                    score_a: null,
-                    score_b: null,
-                    status: "scheduled",
-                });
-            }
-        }
-        await batch.commit();
-        console.log("✅ Semi-final brackets revealed for", eventId);
-        return null;
-    });
-
-/* ───────── revealBasketballElims – build QFs when all qualifiers are done ─────────
-   Pools A/B/C/D, tiebreaker = wins → point-diff.
-   Seeds = [W1=A1, W2=A2, W3=B1, W4=B2, W5=C1, W6=C2, W7=D1, W8=D2]
-   QFs:
-     QF1: W1 v W8 (Court 1, 17:20)
-     QF2: W2 v W7 (Court 2, 17:20)
-     QF3: W3 v W6 (Court 1, 17:30)
-     QF4: W4 v W5 (Court 2, 17:30)
--------------------------------------------------------------------------------*/
-exports.revealBasketballElims = functions.firestore
-    .document("matches/{matchId}")
-    .onUpdate(async (chg, ctx) => {
-        const before = chg.before.data();
-        const after = chg.after.data();
-
-        console.log(`🏀 Basketball function triggered for ${ctx.params.matchId}`);
-        console.log(`🏀 Status change: ${before.status} → ${after.status}`);
-        console.log(`🏀 Event ID: ${after.event_id}, Match type: ${after.match_type}`);
-        // Broaden trigger: any transition INTO final (scheduled/live/other -> final)
-        if (after.status === 'final' && before.status !== 'final') {
-            // proceed
-        } else {
-            console.log('🏀 Skip: not a transition into final');
-            return null;
-        }
-        if (after.event_id !== "basketball3v3") {
-            console.log(`🏀 Skipping: event_id is ${after.event_id}, not basketball3v3`);
-            return null;
-        }
-        if (after.match_type !== "qualifier") {
-            console.log(`🏀 Skipping: match_type is ${after.match_type}, not qualifier`);
-            return null;
-        }
-
-        // 1) pull ALL qualifiers for basketball3v3
-        const qualsSnap = await db
-            .collection("matches")
-            .where("event_id", "==", "basketball3v3")
-            .where("match_type", "==", "qualifier")
-            .get();
-
-        const unfinished = qualsSnap.docs.filter(
-            (d) => d.data().status !== "final"
-        );
-        if (unfinished.length) {
-            console.log(`⏳ BB3v3: ${unfinished.length} qualifiers remaining`);
-            return null;
-        }
-
-        // 2) standings per pool (wins → point-diff)
-        const pools = {}; // { A:{team:{wins,diff}}, B:{…} }
-        for (const doc of qualsSnap.docs) {
-            const d = doc.data();
-            const pool = d.pool; // expect "A"|"B"
-            if (!pool) continue;
-            pools[pool] ??= {};
-            const a = d.competitor_a.id,
-                b = d.competitor_b.id;
-            const sa = d.score_a,
-                sb = d.score_b;
-
-            const upd = (id, win, diff) => {
-                const t = pools[pool][id] ?? { wins: 0, diff: 0 };
-                t.wins += win;
-                t.diff += diff;
-                pools[pool][id] = t;
-            };
-
-            if (sa > sb) {
-                upd(a, 1, sa - sb);
-                upd(b, 0, sb - sa);
-            } else if (sb > sa) {
-                upd(b, 1, sb - sa);
-                upd(a, 0, sa - sb);
-            } else {
-                upd(a, 0, 0);
-                upd(b, 0, 0);
-            } // ties unlikely
-        }
-
-        const rank = (obj) =>
-            Object.entries(obj)
-                .sort(([, A], [, B]) => B.wins - A.wins || B.diff - A.diff)
-                .map(([id]) => id);
-
-        const A = rank(pools["A"] || {}),
-            B = rank(pools["B"] || {});
-
-        if ([A, B].some((arr) => arr.length < 2)) {
-            console.error("❌ BB3v3 pools incomplete, cannot seed SFs");
-            return null;
-        }
-
-        // 3) top 2 from each pool advance to semis
-        const A1 = A[0], A2 = A[1], B1 = B[0], B2 = B[1];
-        console.log("🏀 Semi Seeds:", { A1, A2, B1, B2 });
-
-        // 4) write SF teams if still placeholders or missing
-        const sf1Ref = db.doc('matches/B-SF1');
-        const sf2Ref = db.doc('matches/B-SF2');
-        const [sf1Doc, sf2Doc] = await Promise.all([sf1Ref.get(), sf2Ref.get()]);
-
-        const needsUpdate = (docSnap) => {
-            if (!docSnap.exists) return false;
-            const d = docSnap.data();
-            const aId = d.competitor_a?.id; const bId = d.competitor_b?.id;
-            const isPlaceholder = (id) => !id || /^B(QF|SF)/.test(id) || /^BW[1-8]$/.test(id);
-            return isPlaceholder(aId) || isPlaceholder(bId);
+        const update = {
+            status: "void",
+            score_a: null,
+            score_b: null
         };
 
-        if (!needsUpdate(sf1Doc) && !needsUpdate(sf2Doc)) {
-            console.log('🏀 Semis already seeded, skipping update');
-            return null;
-        }
-
-        const batch = db.batch();
-        if (needsUpdate(sf1Doc)) batch.update(sf1Ref, { competitor_a: {id: A1}, competitor_b: {id: B2}, score_a: null, score_b: null, status: 'scheduled' });
-        if (needsUpdate(sf2Doc)) batch.update(sf2Ref, { competitor_a: {id: B1}, competitor_b: {id: A2}, score_a: null, score_b: null, status: 'scheduled' });
-        await batch.commit();
-        console.log('✅ BB3v3: Semis seeded');
-        return null;
-    });
-
-// reveal frisbee elims
-exports.revealFrisbeeElims = functions.firestore
-    .document("matches/{matchId}")
-    .onUpdate(async (chg, ctx) => {
-        const before = chg.before.data(),
-            after = chg.after.data();
-        
-        console.log(`🥏 Frisbee function triggered for ${ctx.params.matchId}`);
-        console.log(`🥏 Status change: ${before.status} → ${after.status}`);
-        console.log(`🥏 Event ID: ${after.event_id}, Match type: ${after.match_type}`);
-        // Broaden trigger just like basketball
-        if (!(after.status === 'final' && before.status !== 'final')) {
-            console.log('🥏 Skip: not a transition into final');
-            return null;
-        }
-        if (after.event_id !== "frisbee5v5") {
-            console.log(`🥏 Skipping: event_id is ${after.event_id}, not frisbee5v5`);
-            return null;
-        }
-        if (after.match_type !== "qualifier") {
-            console.log(`🥏 Skipping: match_type is ${after.match_type}, not qualifier`);
-            return null;
-        }
-
-        // pull ALL frisbee qualifiers
-        const qualsSnap = await db
-            .collection("matches")
-            .where("event_id", "==", "frisbee5v5")
-            .where("match_type", "==", "qualifier")
-            .get();
-
-        // wait until every qual is final
-        const remaining = qualsSnap.docs.filter(
-            (d) => d.data().status !== "final"
-        );
-        if (remaining.length) return null;
-
-        // single round robin standings (all 7 teams)
-        const standings = {}; // { teamId: {wins, diff} }
-        
-        for (const doc of qualsSnap.docs) {
-            const d = doc.data();
-            const a = d.competitor_a.id,
-                b = d.competitor_b.id;
-            const sa = d.score_a,
-                sb = d.score_b;
-
-            const upd = (id, win, diff) => {
-                const t = standings[id] ?? { wins: 0, diff: 0 };
-                t.wins += win;
-                t.diff += diff;
-                standings[id] = t;
+        if (placeholders[i]) {
+            update.competitor_a = {
+                id: placeholders[i][0]
             };
 
-            if (sa > sb) {
-                upd(a, 1, sa - sb);
-                upd(b, 0, sb - sa);
-            } else if (sb > sa) {
-                upd(b, 1, sb - sa);
-                upd(a, 0, sa - sb);
-            } else {
-                upd(a, 0, 0);
-                upd(b, 0, 0);
-            }
+            update.competitor_b = {
+                id: placeholders[i][1]
+            };
         }
 
-        // rank all teams by wins, then point difference
-        const ranked = Object.entries(standings)
-            .sort(([, a], [, b]) => b.wins - a.wins || b.diff - a.diff)
-            .map(([id]) => id);
+        batch.update(ref, update);
+    }
 
-        if (ranked.length < 4) {
-            console.error("❌ frisbee: insufficient teams for elimination");
-            return null;
+    await batch.commit();
+}
+
+
+/*
+   Reveal a match.
+*/
+function revealMatch(batch, matchId, competitorA, competitorB) {
+    batch.update(db.doc(`matches/${matchId}`), {
+        competitor_a: {
+            id: competitorA
+        },
+        competitor_b: {
+            id: competitorB
+        },
+        score_a: null,
+        score_b: null,
+        status: "scheduled"
+    });
+}
+
+
+/* ============================================================
+   3. QUALIFIER STANDINGS
+   ============================================================ */
+
+/*
+   Creates standings:
+
+       {
+           teamId: {
+               wins,
+               diff
+           }
+       }
+
+   Tiebreak:
+       wins → point difference
+*/
+
+function updateStanding(standings, id, win, diff) {
+    if (!id) return;
+
+    if (!standings[id]) {
+        standings[id] = {
+            wins: 0,
+            diff: 0
+        };
+    }
+
+    standings[id].wins += win;
+    standings[id].diff += diff;
+}
+
+
+function addMatchToStandings(standings, match) {
+    if (
+        !match.competitor_a?.id ||
+        !match.competitor_b?.id ||
+        typeof match.score_a !== "number" ||
+        typeof match.score_b !== "number"
+    ) {
+        return;
+    }
+
+    const a = match.competitor_a.id;
+    const b = match.competitor_b.id;
+    const sa = match.score_a;
+    const sb = match.score_b;
+
+    if (sa > sb) {
+        updateStanding(standings, a, 1, sa - sb);
+        updateStanding(standings, b, 0, sb - sa);
+    } else if (sb > sa) {
+        updateStanding(standings, b, 1, sb - sa);
+        updateStanding(standings, a, 0, sa - sb);
+    } else {
+        updateStanding(standings, a, 0, 0);
+        updateStanding(standings, b, 0, 0);
+    }
+}
+
+
+function rankStandings(standings) {
+    return Object.entries(standings)
+        .sort(
+            ([, a], [, b]) =>
+                b.wins - a.wins ||
+                b.diff - a.diff
+        )
+        .map(([id]) => id);
+}
+
+
+/* ============================================================
+   4. GET ALL QUALIFIERS
+   ============================================================ */
+
+async function getQualifiers(eventId) {
+    return db
+        .collection("matches")
+        .where("event_id", "==", eventId)
+        .where("match_type", "==", "qualifier")
+        .get();
+}
+
+
+function qualifiersComplete(snapshot) {
+    return snapshot.docs.every(
+        doc => doc.data().status === "final"
+    );
+}
+
+
+/*
+   Returns:
+
+       {
+           A: [1st, 2nd, 3rd, ...],
+           B: [1st, 2nd, 3rd, ...]
+       }
+
+   if there are multiple groups.
+
+   For one group:
+
+       {
+           ALL: [1st, 2nd, 3rd, 4th, ...]
+       }
+*/
+function buildGroupStandings(snapshot) {
+    const groups = {};
+
+    snapshot.docs.forEach(doc => {
+        const match = doc.data();
+
+        const group = match.pool || match.group || "ALL";
+
+        if (!groups[group]) {
+            groups[group] = {};
         }
 
-        const first = ranked[0],   // 1st place
-            second = ranked[1],    // 2nd place  
-            third = ranked[2],     // 3rd place
-            fourth = ranked[3];    // 4th place
-
-        console.log("🥏 Frisbee final standings:", { first, second, third, fourth });
-
-        const bRef = db.doc('matches/F-B1');
-        const fRef = db.doc('matches/F-F1');
-        const [bDoc, fDoc] = await Promise.all([bRef.get(), fRef.get()]);
-        const isPlace = (id) => !id || /^FSF[12][WL]$/.test(id) || /^FR[12]W$/.test(id);
-        const needB = !bDoc.exists || isPlace(bDoc.data().competitor_a?.id) || isPlace(bDoc.data().competitor_b?.id);
-        const needF = !fDoc.exists || isPlace(fDoc.data().competitor_a?.id) || isPlace(fDoc.data().competitor_b?.id);
-        if(!needB && !needF){
-            console.log('🥏 Bronze/final already seeded, skipping');
-            return null;
-        }
-        const batch = db.batch();
-        if(needB) batch.update(bRef, { competitor_a: {id: third}, competitor_b: {id: fourth}, score_a: null, score_b: null, status: 'scheduled' });
-        if(needF) batch.update(fRef, { competitor_a: {id: first}, competitor_b: {id: second}, score_a: null, score_b: null, status: 'scheduled' });
-        await batch.commit();
-        console.log('✅ frisbee: bronze/final seeded');
-        return null;
+        addMatchToStandings(groups[group], match);
     });
 
-// ───────── Manual reseed callable (basketball & frisbee) ─────────
-exports.reseedElims = functions.https.onCall(async (data, context) => {
-    const { sport } = data || {};
-    if(!sport || !['basketball3v3','frisbee5v5'].includes(sport)){
-        return { ok:false, error:'sport must be basketball3v3 or frisbee5v5'};
+    const ranked = {};
+
+    for (const [group, standings] of Object.entries(groups)) {
+        ranked[group] = rankStandings(standings);
     }
-    if(sport === 'basketball3v3'){
-        // mimic logic above without needing an update trigger
-        const qualsSnap = await db.collection('matches').where('event_id','==','basketball3v3').where('match_type','==','qualifier').get();
-        if(!qualsSnap.docs.every(d=>d.data().status==='final')) return { ok:false, error:'qualifiers not all final'};
-        const pools = {};
-        for(const doc of qualsSnap.docs){
-            const d = doc.data();
-            if(!d.pool) continue; const pool=d.pool; pools[pool]??={};
-            const a=d.competitor_a.id,b=d.competitor_b.id,sa=d.score_a,sb=d.score_b;
-            const upd=(id,win,diff)=>{ const t=pools[pool][id]??{wins:0,diff:0}; t.wins+=win; t.diff+=diff; pools[pool][id]=t; };
-            if(sa>sb){upd(a,1,sa-sb);upd(b,0,sb-sa);} else if(sb>sa){upd(b,1,sb-sa);upd(a,0,sa-sb);} else {upd(a,0,0);upd(b,0,0);} }
-        const rank=obj=>Object.entries(obj).sort(([,A],[,B])=>B.wins-A.wins||B.diff-A.diff).map(([id])=>id);
-        const A=rank(pools['A']||{}),B=rank(pools['B']||{}); if(A.length<2||B.length<2) return { ok:false, error:'not enough teams ranked'};
-        const [A1,A2,B1,B2]=[A[0],A[1],B[0],B[1]];
-        const sf1Ref=db.doc('matches/B-SF1'); const sf2Ref=db.doc('matches/B-SF2');
-        const batch=db.batch(); batch.update(sf1Ref,{competitor_a:{id:A1},competitor_b:{id:B2},score_a:null,score_b:null,status:'scheduled'}); batch.update(sf2Ref,{competitor_a:{id:B1},competitor_b:{id:A2},score_a:null,score_b:null,status:'scheduled'}); await batch.commit();
-        return { ok:true, seeded:{A1,A2,B1,B2} };
+
+    return ranked;
+}
+
+
+/* ============================================================
+   5. DETERMINE SEMI-FINAL TEAMS
+   ============================================================ */
+
+/*
+   RULE:
+
+   2 groups:
+       A1 vs B2
+       B1 vs A2
+
+   1 group:
+       1st vs 3rd
+       2nd vs 4th
+*/
+
+function getSemiTeams(groupStandings) {
+    const groups = Object.keys(groupStandings);
+
+    /*
+       One group
+    */
+    if (groups.length === 1) {
+        const ranked = groupStandings[groups[0]];
+
+        if (ranked.length < 4) {
+            return null;
+        }
+
+        return [
+            [ranked[0], ranked[2]],
+            [ranked[1], ranked[3]]
+        ];
     }
-    if(sport === 'frisbee5v5'){
-        const qualsSnap = await db.collection('matches').where('event_id','==','frisbee5v5').where('match_type','==','qualifier').get();
-        if(!qualsSnap.docs.every(d=>d.data().status==='final')) return { ok:false, error:'qualifiers not all final'};
-        const standings={};
-        for(const doc of qualsSnap.docs){ const d=doc.data(); const a=d.competitor_a.id,b=d.competitor_b.id,sa=d.score_a,sb=d.score_b; const upd=(id,win,diff)=>{ const t=standings[id]??{wins:0,diff:0}; t.wins+=win; t.diff+=diff; standings[id]=t; }; if(sa>sb){upd(a,1,sa-sb);upd(b,0,sb-sa);} else if(sb>sa){upd(b,1,sb-sa);upd(a,0,sa-b);} else {upd(a,0,0);upd(b,0,0);} }
-        const ranked=Object.entries(standings).sort(([,a],[,b])=>b.wins-a.wins||b.diff-a.diff).map(([id])=>id); if(ranked.length<4) return { ok:false, error:'need at least 4 ranked'};
-        const [first,second,third,fourth]=[ranked[0],ranked[1],ranked[2],ranked[3]]; const batch=db.batch(); batch.update(db.doc('matches/F-B1'),{competitor_a:{id:third},competitor_b:{id:fourth},score_a:null,score_b:null,status:'scheduled'}); batch.update(db.doc('matches/F-F1'),{competitor_a:{id:first},competitor_b:{id:second},score_a:null,score_b:null,status:'scheduled'}); await batch.commit();
-        return { ok:true, seeded:{first,second,third,fourth} };
+
+    /*
+       Two groups
+    */
+    if (groups.length >= 2) {
+        const firstGroup = groupStandings[groups[0]];
+        const secondGroup = groupStandings[groups[1]];
+
+        if (
+            firstGroup.length < 2 ||
+            secondGroup.length < 2
+        ) {
+            return null;
+        }
+
+        return [
+            [firstGroup[0], secondGroup[1]],
+            [secondGroup[0], firstGroup[1]]
+        ];
     }
-});
 
-/* ───────── seriesWatcher (badminton) – progresses BO3 series & hides un-needed G3 ─────────
-   ① Trigger: any series match ("semi" | "bronze" | "final") moves   live ➜ final
-   ② When a team reaches 2 wins (best-of-3) it:
-      • Removes game-3 placeholder if it hasn't started
-      • Injects winner / loser IDs into the next-round placeholders
-        –  Semi  ➜ bronze / final
-        –  Bronze  ➜ nothing further (handled by autoFillAwards)
-   Works for any sport configured in EVENT_FORMATS with .type === "bo3"
--------------------------------------------------------------------------------*/
+    return null;
+}
 
-exports.seriesWatcher = functions.firestore
-    .document("matches/{matchId}")
-    .onUpdate(async (chg, ctx) => {
-        // Helper function INSIDE the handler to ensure proper scope
-        function isPlaceholder(teamId, match) {
-            if (!teamId) return true;
 
-            // Badminton finals/bronze placeholders
-            if (/^(?:S|D)[FB]W\d+$/.test(teamId)) return true;
+/*
+   For sports with NO semifinals:
 
-            // Basketball placeholders (seed & progression tags)
-            if (/^BW[1-8]$/.test(teamId)) return true;
-            if (/^B(?:QF[1-4]W|SF[12][WL])$/.test(teamId)) return true;
+       1st vs 2nd
+*/
+function getFinalTeams(groupStandings) {
+    const groups = Object.keys(groupStandings);
 
-            // (Optional) badminton semi placeholders (S1..S4 / D1..D4)
-            if (/^(?:S|D)[1-4]$/.test(teamId)) return true;
+    if (groups.length === 1) {
+        const ranked = groupStandings[groups[0]];
 
-            // Frisbee placeholders used in elims
-            if (/^F(?:R[12]W|SF[12][WL]|CHAMP)$/.test(teamId)) return true;
+        if (ranked.length < 2) {
+            return null;
+        }
 
-            // 🔴 IMPORTANT: Only treat A1..C4 as placeholders for frisbee elims,
-            // not for basketball.
-            if (
-                match?.event_id === "frisbee5v5" &&
-                match?.match_type !== "qualifier" &&
-                /^[ABC][1-4]$/.test(teamId)
-            ) {
-                return true;
+        return [ranked[0], ranked[1]];
+    }
+
+    if (groups.length >= 2) {
+        /*
+           For two groups, overall ranking is determined by
+           combining the group standings.
+
+           We need the top two overall teams.
+        */
+
+        const combined = [];
+
+        for (const group of groups) {
+            for (const id of groupStandings[group]) {
+                combined.push(id);
+            }
+        }
+
+        /*
+           In the normal two-group setup, finalists are
+           the winners of each group.
+        */
+
+        const g1 = groupStandings[groups[0]];
+        const g2 = groupStandings[groups[1]];
+
+        if (g1.length < 1 || g2.length < 1) {
+            return null;
+        }
+
+        return [g1[0], g2[0]];
+    }
+
+    return null;
+}
+
+
+/* ============================================================
+   6. INITIALISE / HIDE ELIMINATION MATCHES
+   ============================================================ */
+
+/*
+   This is the important fix for your current problem.
+
+   Before qualifiers are complete:
+
+       SEMIS      = void
+       BRONZE     = void
+       FINAL      = void
+
+   Therefore none of them should appear as playable matches.
+*/
+
+exports.initialiseEliminationMatches =
+    functions.firestore
+        .document("matches/{matchId}")
+        .onCreate(async (snap) => {
+
+            const data = snap.data();
+            const eventId = data.event_id;
+            const config = getConfig(eventId);
+
+            if (!config) {
+                return null;
             }
 
-            return false;
-        }
+            const matchId = snap.id;
 
-        const before = chg.before.data();
-        const after = chg.after.data();
+            const allElims = [
+                ...(config.semis || []),
+                ...(config.bronze || []),
+                ...(config.finals || [])
+            ];
 
-        /* fire only on live ➜ final and only for series games */
-        if (!(before.status === "live" && after.status === "final"))
-            return null;
-        if (!["semi", "bronze", "final"].includes(after.match_type))
-            return null;
+            if (!allElims.includes(matchId)) {
+                return null;
+            }
 
-        const eventId = after.event_id;
-        const config = EVENT_FORMATS[eventId];
-        if (!config || config.type !== "bo3") return null;
+            /*
+               Do not overwrite an already-started match.
+            */
+            if (
+                data.status === "live" ||
+                data.status === "final"
+            ) {
+                return null;
+            }
 
-        const matchId = ctx.params.matchId;
-        let seriesRoot, gameNumber;
+            const update = {
+                status: "void",
+                score_a: null,
+                score_b: null
+            };
 
-        // Parse different match ID formats
-        if (matchId.includes("-SF")) {
-            // Semi format: S-SF1-1, S-SF1-2, S-SF1-3
-            const parts = matchId.split("-");
-            if (parts.length !== 3) return null;
-            seriesRoot = `${parts[0]}-${parts[1]}`; // "S-SF1"
-            gameNumber = parseInt(parts[2]);
-        } else {
-            // Finals/Bronze format: S-F1, S-F2, S-F3 or S-B1, S-B2, S-B3
-            const match = matchId.match(/^([SD])-([FB])(\d+)$/);
-            if (!match) return null;
-            const [, prefix, type, num] = match;
-            seriesRoot = `${prefix}-${type}`; // "S-F" or "S-B"
-            gameNumber = parseInt(num);
-        }
+            await snap.ref.update(update);
 
-        console.log(
-            `🎮 Processing ${matchId}: series=${seriesRoot}, game=${gameNumber}`
-        );
-
-        /* fetch all 3 games in this series */
-        let gameRefs;
-        if (seriesRoot.includes("-SF")) {
-            // Semi format: S-SF1-1, S-SF1-2, S-SF1-3
-            gameRefs = [1, 2, 3].map((g) =>
-                db.doc(`matches/${seriesRoot}-${g}`)
+            console.log(
+                `🙈 Hidden elimination match ${matchId} for ${eventId}`
             );
-        } else {
-            // Finals/Bronze format: S-F1, S-F2, S-F3
-            gameRefs = [1, 2, 3].map((g) =>
-                db.doc(`matches/${seriesRoot}${g}`)
-            );
-        }
 
-        const gamesSnap = await db.getAll(...gameRefs);
-        const games = gamesSnap
-            .filter((d) => d.exists)
-            .map((d) => ({ id: d.id, ...d.data() }));
-
-        console.log(`🎮 Found ${games.length} games in series ${seriesRoot}`);
-
-        if (games.length === 0) {
-            console.error(`❌ No games found for series ${seriesRoot}`);
             return null;
-        }
-
-        /* tally wins */
-        const winMap = {};
-        const allTeams = new Set(); // Track all participating teams
-
-        games.forEach((g) => {
-            if (g.status !== "final") return;
-
-            // Track all teams that participated
-            allTeams.add(g.competitor_a.id);
-            allTeams.add(g.competitor_b.id);
-
-            if (g.score_a === g.score_b) return; // tie unlikely
-            const winner =
-                g.score_a > g.score_b ? g.competitor_a.id : g.competitor_b.id;
-            winMap[winner] = (winMap[winner] || 0) + 1;
         });
 
-        console.log(`🎮 Win map:`, winMap);
-        console.log(`🎮 All teams:`, Array.from(allTeams));
 
-        const decidedTeam = Object.entries(winMap).find(
-            ([, wins]) => wins >= 2
-        );
-        if (!decidedTeam) {
-            console.log(`🎮 Series ${seriesRoot} not decided yet`);
+/*
+   This function handles existing documents too.
+
+   When ANY qualifier changes, if qualifiers are not complete,
+   all elimination rounds are forced back to hidden state.
+
+   This prevents pre-created bronze/final documents from
+   accidentally appearing.
+*/
+
+exports.hideEliminationsUntilQualifiersDone =
+    functions.firestore
+        .document("matches/{matchId}")
+        .onUpdate(async (chg) => {
+
+            const before = chg.before.data();
+            const after = chg.after.data();
+
+            if (
+                after.match_type !== "qualifier" ||
+                before.status === after.status
+            ) {
+                return null;
+            }
+
+            const eventId = after.event_id;
+            const config = getConfig(eventId);
+
+            if (!config) {
+                return null;
+            }
+
+            const quals = await getQualifiers(eventId);
+
+            if (qualifiersComplete(quals)) {
+                return null;
+            }
+
+            const ids = [
+                ...(config.semis || []),
+                ...(config.bronze || []),
+                ...(config.finals || [])
+            ];
+
+            const batch = db.batch();
+
+            for (const id of ids) {
+                const ref = db.doc(`matches/${id}`);
+                const snap = await ref.get();
+
+                if (!snap.exists) continue;
+
+                const d = snap.data();
+
+                /*
+                   Do NOT hide a match which has already started.
+                */
+                if (
+                    d.status === "live" ||
+                    d.status === "final"
+                ) {
+                    continue;
+                }
+
+                batch.update(ref, {
+                    status: "void",
+                    score_a: null,
+                    score_b: null
+                });
+            }
+
+            await batch.commit();
+
+            console.log(
+                `🙈 ${eventId}: qualifiers incomplete; elimination matches hidden`
+            );
+
             return null;
-        }
+        });
 
-        const [winnerId] = decidedTeam;
-        // Find loser from all participating teams, not just winMap keys
-        const loserId = Array.from(allTeams).find((t) => t !== winnerId);
 
-        console.log(
-            `🏆 Series ${seriesRoot} decided: ${winnerId} beats ${loserId}`
-        );
+/* ============================================================
+   7. REVEAL SEMIS / DIRECT FINALS AFTER QUALIFIERS
+   ============================================================ */
 
-        /* hide game-3 if it hasn't started */
-        const batch = db.batch();
-        const g3 = games.find((g) => g.id.endsWith("3"));
-        if (g3 && g3.status === "scheduled") {
-            batch.update(db.doc(`matches/${g3.id}`), { status: "void" });
-            console.log(`🚫 Voided unused game 3: ${g3.id}`);
-        }
+exports.revealEliminationsAfterQualifiers =
+    functions.firestore
+        .document("matches/{matchId}")
+        .onUpdate(async (chg, ctx) => {
 
-        /* pipe winners forward only for semis */
-        if (seriesRoot.includes("-SF")) {
-            const parts = seriesRoot.split("-");
-            const prefix = parts[0]; // "S" or "D"
-            const sfNum = parts[1]; // "SF1" or "SF2"
+            const before = chg.before.data();
+            const after = chg.after.data();
 
-            try {
-                // Check current state of finals and bronze to determine slots
-                const finalRef = db.doc(`matches/${prefix}-F1`);
-                const bronzeRef = db.doc(`matches/${prefix}-B1`);
+            /*
+               Trigger when a qualifier becomes final.
+            */
+            if (
+                after.match_type !== "qualifier" ||
+                after.status !== "final" ||
+                before.status === "final"
+            ) {
+                return null;
+            }
 
-                const [finalDoc, bronzeDoc] = await Promise.all([
-                    finalRef.get(),
-                    bronzeRef.get(),
-                ]);
+            const eventId = after.event_id;
+            const config = getConfig(eventId);
 
-                if (!finalDoc.exists || !bronzeDoc.exists) {
+            if (!config) {
+                return null;
+            }
+
+            console.log(
+                `🏁 ${eventId}: qualifier ${ctx.params.matchId} completed`
+            );
+
+            const quals = await getQualifiers(eventId);
+
+            /*
+               CRITICAL:
+               Do absolutely nothing until EVERY qualifier is final.
+            */
+            if (!qualifiersComplete(quals)) {
+                console.log(
+                    `⏳ ${eventId}: qualifiers are not all finished`
+                );
+                return null;
+            }
+
+            const groupStandings = buildGroupStandings(quals);
+
+            console.log(
+                `📊 ${eventId} standings:`,
+                groupStandings
+            );
+
+            const batch = db.batch();
+
+
+            /* ------------------------------------------------
+               SPORT WITH SEMIS
+               ------------------------------------------------ */
+
+            if (config.hasSemis) {
+
+                const semiTeams =
+                    getSemiTeams(groupStandings);
+
+                if (!semiTeams) {
                     console.error(
-                        `❌ Missing final or bronze matches for ${prefix}`
+                        `❌ ${eventId}: insufficient teams for semifinals`
                     );
-                    await batch.commit(); // Still commit to void game 3
                     return null;
                 }
 
-                const finalData = finalDoc.data();
-                const bronzeData = bronzeDoc.data();
+                console.log(
+                    `🔢 ${eventId} semi teams:`,
+                    semiTeams
+                );
 
-                // Determine which slots to fill for BOTH finals and bronze
-                let finalSlot, bronzeSlot;
+                /*
+                   Reveal ONLY the semifinals.
 
-                // Check finals for available slot
-                if (isPlaceholder(finalData.competitor_a?.id)) {
-                    finalSlot = "competitor_a";
-                } else if (isPlaceholder(finalData.competitor_b?.id)) {
-                    finalSlot = "competitor_b";
-                } else {
-                    console.log(`↪️ Finals already fully seeded, skipping`);
-                    await batch.commit(); // Still commit to void game 3 if needed
-                    return null;
-                }
+                   Bronze and final remain void.
+                */
 
-                // Check bronze for available slot (independent of finals)
-                if (isPlaceholder(bronzeData.competitor_a?.id)) {
-                    bronzeSlot = "competitor_a";
-                } else if (isPlaceholder(bronzeData.competitor_b?.id)) {
-                    bronzeSlot = "competitor_b";
-                } else {
-                    console.log(
-                        `↪️ Bronze already fully seeded for finals slot`
+                for (
+                    let i = 0;
+                    i < config.semis.length;
+                    i++
+                ) {
+                    const [a, b] = semiTeams[i];
+
+                    revealMatch(
+                        batch,
+                        config.semis[i],
+                        a,
+                        b
                     );
-                    // Still update finals even if bronze is full
                 }
 
-                // Update finals (winner goes to finals)
-                for (let g = 1; g <= 3; g++) {
-                    const ref = db.doc(`matches/${prefix}-F${g}`);
-                    batch.update(ref, {
-                        [finalSlot]: { id: winnerId },
-                        status: "scheduled"
-                    });
-                }
+                /*
+                   Explicitly keep downstream rounds hidden.
+                */
 
-                // Update bronze (loser goes to bronze) - only if slot available
-                if (bronzeSlot) {
-                    for (let g = 1; g <= 3; g++) {
-                        const ref = db.doc(`matches/${prefix}-B${g}`);
+                for (const id of [
+                    ...(config.bronze || []),
+                    ...(config.finals || [])
+                ]) {
+
+                    const ref =
+                        db.doc(`matches/${id}`);
+
+                    const snap = await ref.get();
+
+                    if (!snap.exists) continue;
+
+                    const d = snap.data();
+
+                    if (
+                        d.status !== "live" &&
+                        d.status !== "final"
+                    ) {
                         batch.update(ref, {
-                            [bronzeSlot]: { id: loserId },
-                            status: "scheduled"
+                            status: "void",
+                            score_a: null,
+                            score_b: null
                         });
                     }
                 }
 
+                await batch.commit();
+
                 console.log(
-                    `🔄 Updated finals[${finalSlot}]=${winnerId} and bronze[${bronzeSlot}]=${loserId} with ${sfNum} results`
+                    `✅ ${eventId}: SEMIS revealed. Bronze/final remain hidden.`
                 );
-            } catch (error) {
-                console.error(`❌ Error updating finals/bronze:`, error);
-                // Still commit batch to void game 3 if needed
+
+                return null;
             }
-        }
 
-        // ✅ CRITICAL: Actually commit the batch!
-        try {
-            await batch.commit();
-            console.log(
-                `✅ seriesWatcher: ${seriesRoot} completed → ${winnerId}`
-            );
-        } catch (error) {
-            console.error(`❌ Error committing batch:`, error);
-            throw error;
-        }
 
-        return null;
-    });
+            /* ------------------------------------------------
+               SPORT WITHOUT SEMIS
+               ------------------------------------------------ */
 
-/* ───────── advanceBasketballElims – single-game bracket progression ─────────
-   Triggers when a B-QF* or B-SF* flips live ➜ final:
-     • QF1 → SF1.A, QF2 → SF1.B, QF3 → SF2.A, QF4 → SF2.B
-     • SF winners → F1.A / F1.B, losers → B1.A / B1.B
--------------------------------------------------------------------------------*/
-exports.advanceBasketballElims = functions.firestore
-    .document("matches/{matchId}")
-    .onUpdate(async (chg, ctx) => {
-        const before = chg.before.data();
-        const after = chg.after.data();
+            const finalTeams =
+                getFinalTeams(groupStandings);
 
-        if (!(before.status === "live" && after.status === "final"))
-            return null;
-        if (after.event_id !== "basketball3v3") return null;
-        if (!["semi"].includes(after.match_type)) return null; // Only handle semis now
-
-        const id = ctx.params.matchId;
-        const aId = after.competitor_a?.id,
-            bId = after.competitor_b?.id;
-        if (
-            typeof after.score_a !== "number" ||
-            typeof after.score_b !== "number"
-        )
-            return null;
-        if (!aId || !bId) return null;
-
-        const winnerId = after.score_a > after.score_b ? aId : bId;
-        const loserId = winnerId === aId ? bId : aId;
-
-        const batch = db.batch();
-
-        // SFs: winners → Final, losers → Bronze
-        const sfMatch = id.match(/^B-SF([1-2])$/);
-        if (sfMatch) {
-            const n = Number(sfMatch[1]);
-            if (n === 1) {
-                batch.update(db.doc("matches/B-F1"), {
-                    competitor_a: { id: winnerId },
-                    status: "scheduled"
-                });
-                batch.update(db.doc("matches/B-B1"), {
-                    competitor_a: { id: loserId },
-                    status: "scheduled"
-                });
-            } else {
-                batch.update(db.doc("matches/B-F1"), {
-                    competitor_b: { id: winnerId },
-                    status: "scheduled"
-                });
-                batch.update(db.doc("matches/B-B1"), {
-                    competitor_b: { id: loserId },
-                    status: "scheduled"
-                });
+            if (!finalTeams) {
+                console.error(
+                    `❌ ${eventId}: insufficient teams for final`
+                );
+                return null;
             }
-            await batch.commit();
-            console.log(
-                `🏀 SF${n} → F1/B1 updated (W=${winnerId}, L=${loserId})`
+
+            const finalId = config.finals[0];
+
+            revealMatch(
+                batch,
+                finalId,
+                finalTeams[0],
+                finalTeams[1]
             );
+
+            await batch.commit();
+
+            console.log(
+                `🏆 ${eventId}: direct final revealed`
+            );
+
             return null;
-        }
+        });
 
-        return null;
-    });
 
-// advance frisbee elims
-exports.advanceFrisbeeElims = functions.firestore
-    .document("matches/{matchId}")
-    .onUpdate(async (chg, ctx) => {
-        const before = chg.before.data();
-        const after = chg.after.data();
-        // Broaden trigger: any transition into final
-        if (!(after.status === 'final' && before.status !== 'final')) return null;
-        if (after.event_id !== "frisbee5v5") return null;
-        if (!["bronze", "final"].includes(after.match_type))
-            return null;
+/* ============================================================
+   8. PROGRESS SEMIFINALS → BRONZE / FINAL
+   ============================================================ */
 
-        // Seed bonus match champion slot when final completes
-        if (after.match_type === 'final') {
-            try {
-                const aId = after.competitor_a?.id;
-                const bId = after.competitor_b?.id;
-                if (aId && bId && typeof after.score_a === 'number' && typeof after.score_b === 'number') {
-                    const winnerId = after.score_a > after.score_b ? aId : bId;
-                    const bonusRef = db.doc('matches/F-BON1');
-                    const bonusSnap = await bonusRef.get();
-                    if (bonusSnap.exists) {
-                        const curA = bonusSnap.data().competitor_a?.id;
-                        if (!curA || curA === 'FCHAMP') {
-                            await bonusRef.update({ 
-                                competitor_a: { id: winnerId },
-                                status: "scheduled"
-                            });
-                            console.log(`🥏 Bonus match champion slot set to ${winnerId}`);
-                        } else {
-                            console.log('🥏 Bonus match already has champion slot, skipping');
-                        }
-                    } else {
-                        console.warn('🥏 Bonus match document F-BON1 not found');
-                    }
-                } else {
-                    console.warn('🥏 Final match missing competitor IDs or scores; cannot seed bonus');
+exports.advanceSemifinals =
+    functions.firestore
+        .document("matches/{matchId}")
+        .onUpdate(async (chg, ctx) => {
+
+            const before = chg.before.data();
+            const after = chg.after.data();
+
+            /*
+               Only react when a semifinal becomes final.
+            */
+            if (
+                after.status !== "final" ||
+                before.status === "final"
+            ) {
+                return null;
+            }
+
+            const eventId = after.event_id;
+            const config = getConfig(eventId);
+
+            if (!config || !config.hasSemis) {
+                return null;
+            }
+
+            if (!config.semis.includes(ctx.params.matchId)) {
+                return null;
+            }
+
+            const winner = getWinner(after);
+            const loser = getLoser(after);
+
+            if (!winner || !loser) {
+                console.error(
+                    `❌ ${eventId}: invalid semifinal result`
+                );
+                return null;
+            }
+
+            console.log(
+                `🏆 ${eventId}: ${ctx.params.matchId} → W=${winner}, L=${loser}`
+            );
+
+
+            /*
+               Check ALL semifinals.
+
+               Bronze/final must NOT be revealed after only
+               one semifinal.
+            */
+
+            const semiRefs =
+                config.semis.map(id =>
+                    db.doc(`matches/${id}`)
+                );
+
+            const semiSnaps =
+                await db.getAll(...semiRefs);
+
+            const allFinished =
+                semiSnaps.every(
+                    snap =>
+                        snap.exists &&
+                        snap.data().status === "final"
+                );
+
+            if (!allFinished) {
+                console.log(
+                    `⏳ ${eventId}: waiting for remaining semifinal`
+                );
+                return null;
+            }
+
+
+            /*
+               Collect semifinal winners/losers.
+            */
+
+            const winners = [];
+            const losers = [];
+
+            for (const snap of semiSnaps) {
+                const d = snap.data();
+
+                const w = getWinner(d);
+                const l = getLoser(d);
+
+                if (!w || !l) {
+                    console.error(
+                        `❌ ${eventId}: invalid semifinal ${snap.id}`
+                    );
+                    return null;
                 }
-            } catch (e) {
-                console.error('❌ Error seeding bonus match champion slot:', e);
+
+                winners.push(w);
+                losers.push(l);
             }
+
+            if (
+                winners.length < 2 ||
+                losers.length < 2
+            ) {
+                return null;
+            }
+
+
+            /*
+               NOW — and only now —
+               reveal bronze and final.
+            */
+
+            const batch = db.batch();
+
+
+            /* ---------------- FINAL ---------------- */
+
+            revealMatch(
+                batch,
+                config.finals[0],
+                winners[0],
+                winners[1]
+            );
+
+
+            /* ---------------- BRONZE ---------------- */
+
+            if (
+                config.showThird &&
+                config.bronze &&
+                config.bronze.length > 0
+            ) {
+                revealMatch(
+                    batch,
+                    config.bronze[0],
+                    losers[0],
+                    losers[1]
+                );
+            }
+
+
+            await batch.commit();
+
+            console.log(
+                `✅ ${eventId}: semifinals complete`
+            );
+
+            console.log(
+                `🏆 Final: ${winners[0]} vs ${winners[1]}`
+            );
+
+            if (config.showThird) {
+                console.log(
+                    `🥉 Bronze: ${losers[0]} vs ${losers[1]}`
+                );
+            }
+
+            return null;
+        });
+
+
+/* ============================================================
+   9. BASKETBALL 3v3
+   ============================================================ */
+
+/*
+   Basketball is intentionally retained separately.
+
+   Qualifiers:
+       Group A
+       Group B
+
+   Semis:
+       A1 vs B2
+       B1 vs A2
+
+   B-SF1 winner → B-F1 A
+   B-SF2 winner → B-F1 B
+
+   B-SF1 loser → B-B1 A
+   B-SF2 loser → B-B1 B
+*/
+
+exports.advanceBasketballElims =
+    functions.firestore
+        .document("matches/{matchId}")
+        .onUpdate(async (chg, ctx) => {
+
+            const before = chg.before.data();
+            const after = chg.after.data();
+
+            if (
+                before.status !== "live" ||
+                after.status !== "final"
+            ) {
+                return null;
+            }
+
+            if (
+                after.event_id !== "basketball3v3"
+            ) {
+                return null;
+            }
+
+            if (
+                after.match_type !== "semi"
+            ) {
+                return null;
+            }
+
+            const id = ctx.params.matchId;
+
+            const winner = getWinner(after);
+            const loser = getLoser(after);
+
+            if (!winner || !loser) {
+                return null;
+            }
+
+            const match = id.match(
+                /^B-SF([1-2])$/
+            );
+
+            if (!match) {
+                return null;
+            }
+
+            const n = Number(match[1]);
+
+            const batch = db.batch();
+
+            if (n === 1) {
+
+                batch.update(
+                    db.doc("matches/B-F1"),
+                    {
+                        competitor_a: {
+                            id: winner
+                        },
+                        status: "scheduled"
+                    }
+                );
+
+                batch.update(
+                    db.doc("matches/B-B1"),
+                    {
+                        competitor_a: {
+                            id: loser
+                        },
+                        status: "scheduled"
+                    }
+                );
+
+            } else {
+
+                batch.update(
+                    db.doc("matches/B-F1"),
+                    {
+                        competitor_b: {
+                            id: winner
+                        },
+                        status: "scheduled"
+                    }
+                );
+
+                batch.update(
+                    db.doc("matches/B-B1"),
+                    {
+                        competitor_b: {
+                            id: loser
+                        },
+                        status: "scheduled"
+                    }
+                );
+            }
+
+            await batch.commit();
+
+            console.log(
+                `🏀 B-SF${n}: W=${winner}, L=${loser}`
+            );
+
+            return null;
+        });
+
+
+/* ============================================================
+   10. AWARDS
+   ============================================================ */
+
+/*
+   Awards:
+
+   Champion:
+       final winner
+
+   First runner-up:
+       final loser
+
+   Second runner-up:
+       bronze winner
+
+   Female badminton:
+       no bronze
+       therefore no second_runner_up required
+*/
+
+
+function awardConfig(eventId) {
+
+    const config = getConfig(eventId);
+
+    if (!config) {
+        return null;
+    }
+
+    return {
+        needsThird:
+            config.showThird === true
+    };
+}
+
+
+async function updateAward(eventId, slot, competitorId) {
+
+    if (!competitorId) {
+        return;
+    }
+
+    await db.doc(`awards/${eventId}`).set(
+        {
+            [slot]: {
+                id: competitorId
+            },
+
+            updated_at:
+                FieldValue.serverTimestamp(),
+
+            published: false
+        },
+        {
+            merge: true
+        }
+    );
+}
+
+
+/*
+   Process final / bronze results.
+*/
+
+exports.autoFillAwards =
+    functions.firestore
+        .document("matches/{matchId}")
+        .onUpdate(async (chg, ctx) => {
+
+            const before = chg.before.data();
+            const after = chg.after.data();
+
+            if (
+                after.status !== "final" ||
+                before.status === "final"
+            ) {
+                return null;
+            }
+
+            const eventId = after.event_id;
+            const config = getConfig(eventId);
+
+            if (!config) {
+                return null;
+            }
+
+            const id = ctx.params.matchId;
+
+            /*
+               Only final or bronze matches.
+            */
+
+            const isFinal =
+                config.finals.includes(id);
+
+            const isBronze =
+                config.bronze &&
+                config.bronze.includes(id);
+
+            if (!isFinal && !isBronze) {
+                return null;
+            }
+
+            const winner = getWinner(after);
+            const loser = getLoser(after);
+
+            if (!winner || !loser) {
+                return null;
+            }
+
+
+            /* ---------------- FINAL ---------------- */
+
+            if (isFinal) {
+
+                await db.doc(`awards/${eventId}`).set(
+                    {
+                        champion: {
+                            id: winner
+                        },
+
+                        first_runner_up: {
+                            id: loser
+                        },
+
+                        updated_at:
+                            FieldValue.serverTimestamp(),
+
+                        published: false
+                    },
+                    {
+                        merge: true
+                    }
+                );
+
+                console.log(
+                    `🏆 ${eventId}: champion=${winner}, runner-up=${loser}`
+                );
+            }
+
+
+            /* ---------------- BRONZE ---------------- */
+
+            if (isBronze) {
+
+                await updateAward(
+                    eventId,
+                    "second_runner_up",
+                    winner
+                );
+
+                console.log(
+                    `🥉 ${eventId}: third place=${winner}`
+                );
+            }
+
+            return null;
+        });
+
+
+/* ============================================================
+   11. PUBLISH AWARDS
+   ============================================================ */
+
+exports.publishAwards =
+    functions.firestore
+        .document("awards/{eventId}")
+        .onWrite(async (change, ctx) => {
+
+            if (!change.after.exists) {
+                return null;
+            }
+
+            const data =
+                change.after.data();
+
+            if (data.published === true) {
+                return null;
+            }
+
+            const eventId =
+                ctx.params.eventId;
+
+            const config =
+                awardConfig(eventId);
+
+            if (!config) {
+                return null;
+            }
+
+
+            /*
+               Every event needs:
+
+                   champion
+                   first_runner_up
+            */
+
+            const basicReady =
+                data.champion &&
+                data.first_runner_up;
+
+            if (!basicReady) {
+                return null;
+            }
+
+
+            /*
+               Only sports with bronze require
+               second_runner_up.
+            */
+
+            if (
+                config.needsThird &&
+                !data.second_runner_up
+            ) {
+                return null;
+            }
+
+
+            await change.after.ref.update(
+                {
+                    published: true,
+
+                    published_at:
+                        FieldValue.serverTimestamp()
+                }
+            );
+
+            console.log(
+                `🏅 Awards for ${eventId} published`
+            );
+
+            return null;
+        });
+
+
+/* ============================================================
+   12. PROPAGATE DELAY
+   ============================================================ */
+
+exports.propagateDelay =
+    functions.firestore
+        .document("matches/{matchId}")
+        .onUpdate(async (chg) => {
+
+            const before =
+                chg.before.data();
+
+            const after =
+                chg.after.data();
+
+            if (
+                before.status !== "scheduled" ||
+                after.status !== "live"
+            ) {
+                return null;
+            }
+
+            if (
+                !after.actual_start ||
+                !after.scheduled_at
+            ) {
+                return null;
+            }
+
+            const delay =
+                after.actual_start.toMillis() -
+                after.scheduled_at.toMillis();
+
+            if (delay <= 0) {
+                return null;
+            }
+
+            const later =
+                await db
+                    .collection("matches")
+                    .where(
+                        "event_id",
+                        "==",
+                        after.event_id
+                    )
+                    .where(
+                        "venue",
+                        "==",
+                        after.venue
+                    )
+                    .where(
+                        "scheduled_at",
+                        ">",
+                        after.scheduled_at
+                    )
+                    .get();
+
+            const batch =
+                db.batch();
+
+            later.forEach(doc => {
+
+                const old =
+                    doc.data()
+                        .scheduled_at;
+
+                const newTS =
+                    new admin.firestore.Timestamp(
+                        old.toMillis() / 1000 +
+                        delay / 1000,
+                        0
+                    );
+
+                batch.update(
+                    doc.ref,
+                    {
+                        scheduled_at:
+                            newTS
+                    }
+                );
+            });
+
+            console.log(
+                `⏩ shifted ${later.size} matches on ${after.venue} by ${
+                    delay / 60000
+                } min`
+            );
+
+            return batch.commit();
+        });
+
+
+/* ============================================================
+   13. MANUAL RESEED
+   ============================================================ */
+
+exports.reseedElims =
+    functions.https.onCall(async (data) => {
+
+        const sport =
+            data?.sport;
+
+        const config =
+            getConfig(sport);
+
+        if (!config) {
+            return {
+                ok: false,
+                error: "Unknown sport"
+            };
         }
 
-        console.log(`✅ frisbee: ${after.match_type} match completed (advancer run)`);
-        return null;
+
+        const quals =
+            await getQualifiers(sport);
+
+        if (!qualifiersComplete(quals)) {
+            return {
+                ok: false,
+                error:
+                    "Qualifiers are not all final"
+            };
+        }
+
+
+        const standings =
+            buildGroupStandings(quals);
+
+        const batch =
+            db.batch();
+
+
+        /* ------------------------------------------------
+           SPORTS WITH SEMIS
+           ------------------------------------------------ */
+
+        if (config.hasSemis) {
+
+            const semiTeams =
+                getSemiTeams(standings);
+
+            if (!semiTeams) {
+                return {
+                    ok: false,
+                    error:
+                        "Not enough teams for semifinals"
+                };
+            }
+
+            for (
+                let i = 0;
+                i < config.semis.length;
+                i++
+            ) {
+
+                revealMatch(
+                    batch,
+                    config.semis[i],
+                    semiTeams[i][0],
+                    semiTeams[i][1]
+                );
+            }
+
+            /*
+               IMPORTANT:
+               Bronze/final remain hidden.
+            */
+
+            for (const id of [
+                ...(config.bronze || []),
+                ...(config.finals || [])
+            ]) {
+
+                const ref =
+                    db.doc(`matches/${id}`);
+
+                const snap =
+                    await ref.get();
+
+                if (!snap.exists) continue;
+
+                const d =
+                    snap.data();
+
+                if (
+                    d.status !== "live" &&
+                    d.status !== "final"
+                ) {
+                    batch.update(
+                        ref,
+                        {
+                            status: "void"
+                        }
+                    );
+                }
+            }
+
+            await batch.commit();
+
+            return {
+                ok: true,
+                stage: "semis",
+                seeded: semiTeams
+            };
+        }
+
+
+        /* ------------------------------------------------
+           SPORTS WITHOUT SEMIS
+           ------------------------------------------------ */
+
+        const finalTeams =
+            getFinalTeams(standings);
+
+        if (!finalTeams) {
+            return {
+                ok: false,
+                error:
+                    "Not enough teams for final"
+            };
+        }
+
+        revealMatch(
+            batch,
+            config.finals[0],
+            finalTeams[0],
+            finalTeams[1]
+        );
+
+        await batch.commit();
+
+        return {
+            ok: true,
+            stage: "final",
+            seeded: finalTeams
+        };
     });
