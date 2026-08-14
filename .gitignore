@@ -67,8 +67,8 @@ node_modules/
 scripts/serviceAccountKey.json
 
 #credentials file
-scorekeeper-credentials-2025-08-17T02-45-29.csv
-user-credentials-2025-08-17T13-55-10.csv
+data/scorekeeper-credentials-2026-08-14T11-19-14.csv
+data/user-credentials-2026-08-14T08-23-31.csv
 .DS_Store
 design/
 .prettierrc
