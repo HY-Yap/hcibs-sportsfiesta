@@ -363,7 +363,7 @@ async function computeRankings(eventId, existingMatches) {
     // Tally only final, non-void matches for win/loss stats
     // Count matches if the current team IDs are real (not placeholders)
     matches
-        .filter((m) => m.status === "final" && m.status !== "void")
+        .filter((m) => m.status === "final" && m.status !== "void" && m.match_type === "qualifier")
         .forEach((m) => {
             const aId = m.competitor_a?.id,
                 bId = m.competitor_b?.id;
