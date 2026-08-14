@@ -287,18 +287,18 @@ style.textContent = `
         background: transparent;
     }
     .tab-button:hover {
-        color: #2563eb;
+        color: #f35b50;
         background: #f3f4f6;
     }
     .tab-button.active {
-        color: #2563eb;
+        color: #f35b50;
         background: #dbeafe;
         font-weight: 600;
     }
     .badminton-subtab.active-subtab {
-        color: #2563eb;
-        border-color: #2563eb;
-        background: #eff6ff;
+        color: #f35b50;
+        border-color: #f35b50;
+        background: #ffebee;
         font-weight: 600;
     }
 `;
