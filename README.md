@@ -192,7 +192,19 @@ node scripts/createUser.mjs <email> <password> [name]
 
 -   Creates an Auth user with role `player` and a matching Firestore doc. Useful for one‑off testing.
 
-### 4.3 Reset user password manually
+### 4.3 Set or repair an existing user role
+
+```bash
+node scripts/setUserRole.mjs <email> <role>
+# example usage: node scripts/setUserRole.mjs 01@player.com player
+```
+
+-   Allowed roles are `player`, `scorekeeper`, and `admin`.
+-   Updates both the Firebase Auth custom claim and the matching `users/{uid}` Firestore document so the two roles stay consistent.
+-   Use this if an account shows links for one role but is denied access as another role.
+-   The user must log out of the website and log back in after the update to refresh their authentication token.
+
+### 4.4 Reset user password manually
 
 ```bash
 node scripts/setPassword.mjs <email> <newPassword>
@@ -202,7 +214,7 @@ node scripts/setPassword.mjs <email> <newPassword>
 -   Useful if login email does not actually exist (e.g. scorekeeper1@test.com).
 -   Regular users can reset password through the website which will email them a password reset link.
 
-### 4.4 Reset all matches to a clean state (also clears awards)
+### 4.5 Reset all matches to a clean state (also clears awards)
 
 ```bash
 node scripts/reset-matches.mjs
@@ -211,7 +223,7 @@ node scripts/reset-matches.mjs
 -   Sets matches back to `scheduled`, clears scores and restores known elimination placeholders in every document in `matches`.
 -   The Admin page’s **Reset Matches** does the same thing from the UI for selected events.
 
-### 4.5 Fill qualifier results with realistic test scores (testing only)
+### 4.6 Fill qualifier results with realistic test scores (testing only)
 
 ```bash
 # processes unfinished qualifiers across all events
@@ -317,4 +329,4 @@ node scripts/finish-quals.mjs badminton_doubles badminton_singles
 
 **That’s it.** Follow the order: _Scorekeeper_ → _Matches → Players & Teams → seedUsers_ and you’re set. If something here feels unclear for a future maintainer, annotate this doc with specifics for your year (dates, event IDs) so it gets easier over time.
 
-_Last updated: 2025‑08‑18_
+_Last updated: 2026‑08‑15_
