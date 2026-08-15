@@ -4,39 +4,10 @@ import { doc, getDoc, collection, getDocs } from "https://www.gstatic.com/fireba
 import { auth, db } from "./firebase-init.js";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const sidebarTitleEl = document.getElementById("sidebar-title");
-const sidebarNavEl = document.getElementById("sidebar-nav");
-const dashboardTitleEl = document.getElementById("dashboard-title");
 const mainContentEl = document.getElementById("main-content");
 const sidebar = document.getElementById("sidebar");
 const toggleBtn = document.getElementById("sidebar-toggle");
 const overlay = document.getElementById("sidebar-overlay");
-
-function renderSidebarLinks(role) {
-  sidebarNavEl.innerHTML = "";
-  // Always show profile
-  sidebarNavEl.insertAdjacentHTML("beforeend",
-    `<a href="dashboard.html" id="profile-link" class="block py-2 px-3 rounded hover:bg-accent/20 hover:text-accent font-semibold transition">My Profile</a>`
-  );
-  if (role === "player") {
-    sidebarNavEl.insertAdjacentHTML("beforeend",
-      `<a href="mymatches.html" id="matches-link" class="block py-2 px-3 rounded hover:bg-accent/20 hover:text-accent font-semibold transition">My Matches</a>`
-    );
-    sidebarNavEl.insertAdjacentHTML("beforeend",
-      `<a href="mystats.html" id="stats-link" class="block py-2 px-3 rounded hover:bg-accent/20 hover:text-accent font-semibold transition">My Stats</a>`
-    );
-  }
-  if (role === "scorekeeper" || role === "admin") {
-    sidebarNavEl.insertAdjacentHTML("beforeend",
-      `<a href="scorekeeper.html" id="edit-matches-link" class="block py-2 px-3 rounded hover:bg-accent/20 hover:text-accent font-semibold transition">Edit Matches</a>`
-    );
-  }
-  if (role === "admin") {
-    sidebarNavEl.insertAdjacentHTML("beforeend",
-      `<a href="controls.html" id="admin-controls-link" class="block py-2 px-3 rounded hover:bg-accent/20 hover:text-accent font-semibold transition">Admin Controls</a>`
-    );
-  }
-}
 
 function renderMainContent(role, userData) {
   const fullName = userData.name || userData.displayName || userData.full_name || userData.email || auth.currentUser?.displayName || auth.currentUser?.email || "User";
@@ -145,20 +116,12 @@ onAuthStateChanged(auth, async (user) => {
   let userData = userSnap.exists() ? userSnap.data() : {};
   const role = userData.role || "user";
 
-  // Set titles
-  if (sidebarTitleEl) {
-    if (role === "admin") sidebarTitleEl.textContent = "Admin Dashboard";
-    else if (role === "scorekeeper") sidebarTitleEl.textContent = "Scorekeeper Dashboard";
-    else sidebarTitleEl.textContent = "User Dashboard";
-  }
-  if (dashboardTitleEl) {
-    if (role === "admin") dashboardTitleEl.textContent = "Admin Dashboard";
-    else if (role === "scorekeeper") dashboardTitleEl.textContent = "Scorekeeper Dashboard";
-    else dashboardTitleEl.textContent = "User Dashboard";
-  }
-
-  // Render sidebar always
-  renderSidebarLinks(role);
+  const confirmedState = window.SportsFiestaAuthUI?.write({
+    status: "authenticated",
+    uid: user.uid,
+    role,
+  });
+  window.SportsFiestaAuthUI?.renderDashboard(document, confirmedState);
 
   // Only render main dashboard content if #main-content exists
   if (mainContentEl) {

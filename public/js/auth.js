@@ -24,10 +24,13 @@ async function setUserRole(user) {
             role: "user",
             email: user.email,
         });
+        return "user";
     }
+    return docSnap.data().role || "user";
 }
 
 let wired = false;
+let authStateVersion = 0;
 function initAuth() {
     if (wired) return;
 
@@ -85,7 +88,12 @@ function initAuth() {
                 emailInput.value,
                 passInput.value
             );
-            await setUserRole(userCred.user);
+            const role = await setUserRole(userCred.user);
+            window.SportsFiestaAuthUI?.write({
+                status: "authenticated",
+                uid: userCred.user.uid,
+                role,
+            });
             closeModal();
 
             // 🔥 Force page refresh to reload all personalized content
@@ -141,6 +149,13 @@ function initAuth() {
         (a) =>
             (a.onclick = async (e) => {
                 e.preventDefault();
+                const loggedOutState = window.SportsFiestaAuthUI?.write({
+                    status: "unauthenticated",
+                });
+                window.SportsFiestaAuthUI?.renderNav(
+                    document,
+                    loggedOutState
+                );
                 try {
                     await signOut(auth);
 
@@ -157,52 +172,84 @@ function initAuth() {
 
     // Swap both sets of links based on auth state
     onAuthStateChanged(auth, async (user) => {
+        const stateVersion = ++authStateVersion;
         if (user) {
-            const userRef = doc(db, "users", user.uid);
-            const docSnap = await getDoc(userRef);
-            const role = docSnap.exists() ? docSnap.data().role : "user";
+            const cachedState = window.SportsFiestaAuthUI?.read();
+            const cachedRole =
+                cachedState?.status === "authenticated" &&
+                cachedState.uid === user.uid
+                    ? cachedState.role
+                    : "user";
+
+            // Firebase has confirmed the user immediately. Show authenticated
+            // controls now; the role-specific label can be refined below.
+            const initialState = window.SportsFiestaAuthUI?.write({
+                status: "authenticated",
+                uid: user.uid,
+                role: cachedRole,
+            });
+            applyAuthenticatedState(initialState?.role || cachedRole);
+
+            let role = cachedRole;
+            try {
+                const userRef = doc(db, "users", user.uid);
+                const docSnap = await getDoc(userRef);
+                role = docSnap.exists() ? docSnap.data().role || "user" : "user";
+            } catch (error) {
+                console.warn("Unable to refresh the user's role:", error);
+            }
+
+            // Ignore a role request that completed after a sign-out or account
+            // switch, otherwise stale network responses can repaint the nav.
+            if (
+                stateVersion !== authStateVersion ||
+                auth.currentUser?.uid !== user.uid
+            ) {
+                return;
+            }
+
+            const confirmedState = window.SportsFiestaAuthUI?.write({
+                status: "authenticated",
+                uid: user.uid,
+                role,
+            });
 
             console.log(
                 `Auth state changed: User logged in with role: ${role}`
             );
-
-            authLinks.forEach((a) => {
-                if (role === "admin") {
-                    a.textContent = "Admin Dashboard";
-                    a.onclick = (e) => {
-                        e.preventDefault();
-                        window.location = "dashboard.html";
-                    };
-                } else if (role === "scorekeeper") {
-                    a.textContent = "Scorekeeper Dashboard";
-                    a.onclick = (e) => {
-                        e.preventDefault();
-                        window.location = "dashboard.html";
-                    };
-                } else {
-                    // default user
-                    a.textContent = "My Dashboard";
-                    a.onclick = (e) => {
-                        e.preventDefault();
-                        window.location = "dashboard.html";
-                    };
-                }
-            });
-
-            logoutLinks.forEach((a) => a.classList.remove("hidden"));
+            applyAuthenticatedState(confirmedState?.role || role);
         } else {
             console.log("Auth state changed: User logged out");
 
+            const loggedOutState = window.SportsFiestaAuthUI?.write({
+                status: "unauthenticated",
+            });
+            window.SportsFiestaAuthUI?.renderNav(
+                document,
+                loggedOutState
+            );
+
             authLinks.forEach((a) => {
-                a.textContent = "Login";
                 a.onclick = (e) => {
                     e.preventDefault();
                     openModal();
                 };
             });
-            logoutLinks.forEach((a) => a.classList.add("hidden"));
         }
     });
+
+    function applyAuthenticatedState(role) {
+        window.SportsFiestaAuthUI?.renderNav(document, {
+            status: "authenticated",
+            role,
+        });
+        authLinks.forEach((a) => {
+            a.onclick = (e) => {
+                e.preventDefault();
+                window.location = "dashboard.html";
+            };
+        });
+    }
 }
 
 // Run after nav injection, and try immediately
