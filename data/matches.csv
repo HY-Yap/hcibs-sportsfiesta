@@ -1,4 +1,4 @@
-match_id,event_id,match_type,venue,scheduled_at,pool,competitor_a,competitor_b,scorekeeper_email
+id,event_id,match_type,venue,scheduled_at,pool,competitor_a,competitor_b,scorekeeper_email
 B-Q1,basketball3v3,qualifier,Court 1,2026-08-21T12:00:00Z,A,BA1,BA2,scorekeeper1@score.com
 B-Q2,basketball3v3,qualifier,Court 2,2026-08-21T12:00:00Z,A,BA3,BA4,scorekeeper2@score.com
 B-Q3,basketball3v3,qualifier,Court 3,2026-08-21T12:00:00Z,B,BB1,BB2,scorekeeper3@score.com

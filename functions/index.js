@@ -224,11 +224,6 @@ const EVENT_FORMATS = {
 
         qualifiersNeeded: 4,
 
-        semiMatches: [
-            "F-SF1",
-            "F-SF2"
-        ],
-
         bronzeMatches: [
             "F-B1"
         ],
@@ -238,12 +233,6 @@ const EVENT_FORMATS = {
         ],
 
         placeholders: {
-            semis: [
-                "FSF1",
-                "FSF2",
-                "FSF3",
-                "FSF4"
-            ],
             bronze: [
                 "FB1",
                 "FB2"
@@ -1559,18 +1548,54 @@ exports.autoFillAwards =
 
 
             if (isFinal) {
+                // Female badminton has no bronze match,
+                // but 3rd place is still awarded to the 3rd-ranked
+                // qualifier.
+                if (
+                    eventId === "badminton_singles_female" ||
+                    eventId === "badminton_doubles_female"
+                ) {
+                    const qualsSnap = await getQualifiers(eventId);
+                    const pools = calculateStandings(qualsSnap);
+                    const ranked = rankPool(
+                        pools[config.qualifierPools[0]]
+                    );
 
-                await fillAward(
-                    eventId,
-                    "final",
-                    winner,
-                    loser
-                );
+                    if (ranked.length < 3) {
+                        console.error(
+                            `❌ ${eventId}: cannot determine 3rd place`
+                        );
+                        return null;
+                    }
 
-                console.log(
-                    `🏆 ${eventId}: champion=${winner}, runner-up=${loser}`
-                );
+                    await fillAward(
+                        eventId,
+                        "final",
+                        winner,
+                        loser
+                    );
 
+                    await fillAward(
+                        eventId,
+                        "bronze",
+                        ranked[2]
+                    );
+
+                    console.log(
+                        `🏆 ${eventId}: champion=${winner}, runner-up=${loser}, 3rd=${ranked[2]}`
+                    );
+                } else {
+                    await fillAward(
+                        eventId,
+                        "final",
+                        winner,
+                        loser
+                    );
+
+                    console.log(
+                        `🏆 ${eventId}: champion=${winner}, runner-up=${loser}`
+                    );
+                }
             } else {
 
                 await fillAward(
