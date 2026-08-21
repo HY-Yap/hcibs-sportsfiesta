@@ -100,7 +100,9 @@ const EVENT_FORMATS = {
         ],
 
         finalMatches: [
-            "SM-F1"
+            "SM-F1-1",
+            "SM-F1-2",
+            "SM-F1-3"
         ],
 
         placeholders: {
@@ -135,7 +137,9 @@ const EVENT_FORMATS = {
         bronzeMatches: [],
 
         finalMatches: [
-            "SF-F1"
+            "SF-F1-1",
+            "SF-F1-2",
+            "SF-F1-3"
         ],
 
         placeholders: {
@@ -167,7 +171,9 @@ const EVENT_FORMATS = {
         ],
 
         finalMatches: [
-            "DM-F1"
+            "DM-F1-1",
+            "DM-F1-2",
+            "DM-F1-3"
         ],
 
         placeholders: {
@@ -202,7 +208,9 @@ const EVENT_FORMATS = {
         bronzeMatches: [],
 
         finalMatches: [
-            "DF-F1"
+            "DF-F1-1",
+            "DF-F1-2",
+            "DF-F1-3"
         ],
 
         placeholders: {
@@ -485,6 +493,32 @@ function seedMatch(batch, matchId, competitorA, competitorB) {
     );
 }
 
+/* ================================================================
+   HELPER: seed a hidden match
+
+   Used for later badminton final games. The competitors are already
+   known, but the match must not be visible until progression allows it.
+================================================================ */
+
+function seedHiddenMatch(batch, matchId, competitorA, competitorB) {
+
+    batch.update(
+        db.doc(`matches/${matchId}`),
+        {
+            competitor_a: {
+                id: competitorA
+            },
+
+            competitor_b: {
+                id: competitorB
+            },
+
+            score_a: null,
+            score_b: null,
+        }
+    );
+}
+
 
 /* ================================================================
    1. PROPAGATE DELAY
@@ -683,12 +717,42 @@ exports.revealEliminations = functions.firestore
 
             const batch = db.batch();
 
-            seedMatch(
-                batch,
-                config.finalMatches[0],
-                first,
-                second
-            );
+            if (eventId.startsWith("badminton")) {
+
+                /*
+                * Seed ALL three games with the same competitors.
+                *
+                * Only Game 1 is visible initially.
+                * Games 2 and 3 remain hidden until the best-of-3
+                * progression logic reveals them.
+                */
+
+                seedMatch(
+                    batch,
+                    config.finalMatches[0],
+                    first,
+                    second
+                );
+
+                for (const matchId of config.finalMatches.slice(1)) {
+
+                    seedHiddenMatch(
+                        batch,
+                        matchId,
+                        first,
+                        second
+                    );
+                }
+
+            } else {
+
+                seedMatch(
+                    batch,
+                    config.finalMatches[0],
+                    first,
+                    second
+                );
+            }
 
             await batch.commit();
 
@@ -1028,17 +1092,46 @@ exports.advanceEliminations = functions.firestore
         const batch = db.batch();
 
 
-        for (
-            const matchId of config.finalMatches
-        ) {
+        if (eventId.startsWith("badminton")) {
+
+            /*
+            * Seed ALL three games with the same finalists.
+            *
+            * Game 1 is revealed immediately.
+            * Games 2 and 3 receive the same competitors but remain hidden.
+            * advanceBadmintonFinal controls when they become scheduled.
+            */
 
             seedMatch(
                 batch,
-                matchId,
+                config.finalMatches[0],
                 finalA,
                 finalB
             );
-        }
+
+            for (const matchId of config.finalMatches.slice(1)) {
+
+                seedHiddenMatch(
+                    batch,
+                    matchId,
+                    finalA,
+                    finalB
+                );
+            }
+
+        } else {
+
+            for (const matchId of config.finalMatches) {
+
+                seedMatch(
+                    batch,
+                    matchId,
+                    finalA,
+                    finalB
+                );
+            }
+        } 
+         
 
 
         for (
@@ -1216,6 +1309,162 @@ exports.revealBasketballElims =
             return null;
         });
 
+
+/* ================================================================
+   BADMINTON BEST-OF-3 FINAL PROGRESSION
+================================================================ */
+
+exports.advanceBadmintonFinal = functions.firestore
+    .document("matches/{matchId}")
+    .onUpdate(async (change, context) => {
+
+        const before = change.before.data();
+        const after = change.after.data();
+
+        // Only run when a match has just been completed.
+        if (
+            after.status !== "final" ||
+            before.status === "final"
+        ) {
+            return null;
+        }
+
+        const eventId = after.event_id;
+
+        // Only badminton events.
+        if (!eventId?.startsWith("badminton")) {
+            return null;
+        }
+
+        const config = EVENT_FORMATS[eventId];
+
+        if (!config?.finalMatches?.includes(context.params.matchId)) {
+            return null;
+        }
+
+        const finalMatches = config.finalMatches;
+
+        const currentIndex =
+            finalMatches.indexOf(context.params.matchId);
+
+        // Must have valid competitors and scores.
+        if (
+            !after.competitor_a?.id ||
+            !after.competitor_b?.id ||
+            typeof after.score_a !== "number" ||
+            typeof after.score_b !== "number" ||
+            after.score_a === after.score_b
+        ) {
+            return null;
+        }
+
+        const playerA = after.competitor_a.id;
+        const playerB = after.competitor_b.id;
+
+        const winner =
+            after.score_a > after.score_b
+                ? playerA
+                : playerB;
+
+        /* --------------------------------------------------------
+           GAME 1 FINISHED
+        -------------------------------------------------------- */
+
+        if (currentIndex === 0) {
+
+            // Reveal Game 2 with the same competitors.
+            const game2Ref =
+                db.doc(`matches/${finalMatches[1]}`);
+
+            await game2Ref.set(
+                {
+                    competitor_a: { id: playerA },
+                    competitor_b: { id: playerB },
+                    status: "scheduled"
+                },
+                { merge: true }
+            );
+
+            return null;
+        }
+
+        /* --------------------------------------------------------
+           GAME 2 FINISHED
+        -------------------------------------------------------- */
+
+        if (currentIndex === 1) {
+
+            const game1Snap =
+                await db.doc(
+                    `matches/${finalMatches[0]}`
+                ).get();
+
+            if (!game1Snap.exists) {
+                return null;
+            }
+
+            const game1 = game1Snap.data();
+
+            if (
+                typeof game1.score_a !== "number" ||
+                typeof game1.score_b !== "number"
+            ) {
+                return null;
+            }
+
+            const game1Winner =
+                game1.score_a > game1.score_b
+                    ? game1.competitor_a.id
+                    : game1.competitor_b.id;
+
+            // Same player won Games 1 and 2.
+            // Best-of-3 is over; Game 3 stays hidden.
+            if (game1Winner === winner) {
+
+                await db.doc(
+                    `matches/${finalMatches[2]}`
+                ).update({
+                    status: "hidden"
+                });
+
+                console.log(
+                    `🏆 ${eventId}: ${winner} wins 2-0`
+                );
+
+                return null;
+            }
+
+            // One win each → reveal Game 3.
+            await db.doc(
+                `matches/${finalMatches[2]}`
+            ).set(
+                {
+                    competitor_a: { id: playerA },
+                    competitor_b: { id: playerB },
+                    status: "scheduled"
+                },
+                { merge: true }
+            );
+
+            console.log(
+                `🏸 ${eventId}: final tied 1-1, revealing Game 3`
+            );
+
+            return null;
+        }
+
+        // Game 3 finished. Series is complete.
+        if (currentIndex === 2) {
+
+            console.log(
+                `🏆 ${eventId}: best-of-3 final complete`
+            );
+
+            return null;
+        }
+
+        return null;
+    });
 
 /* ================================================================
    5. BASKETBALL SEMIS → FINAL / BRONZE
@@ -1769,12 +2018,39 @@ exports.reseedElims =
                 const batch =
                     db.batch();
 
-                seedMatch(
-                    batch,
-                    config.finalMatches[0],
-                    ranked[0],
-                    ranked[1]
-                );
+                if (sport.startsWith("badminton")) {
+
+                    // Game 1 is visible.
+                    seedMatch(
+                        batch,
+                        config.finalMatches[0],
+                        ranked[0],
+                        ranked[1]
+                    );
+
+                    /*
+                    * Games 2 and 3 have the same competitors,
+                    * but remain hidden until required.
+                    */
+                    for (const matchId of config.finalMatches.slice(1)) {
+
+                        seedHiddenMatch(
+                            batch,
+                            matchId,
+                            ranked[0],
+                            ranked[1]
+                        );
+                    }
+
+                } else {
+
+                    seedMatch(
+                        batch,
+                        config.finalMatches[0],
+                        ranked[0],
+                        ranked[1]
+                    );
+                }
 
                 await batch.commit();
 

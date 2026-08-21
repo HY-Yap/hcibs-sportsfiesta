@@ -1342,8 +1342,8 @@ function defaultParticipantsFor(eventId, matchId) {
     if (isBadmintonSingle) {
         const sf = matchId.match(/^S-SF([12])-\d$/);
         if (sf) return sf[1] === "1" ? ["S1", "S4"] : ["S2", "S3"];
-        if (/^S-F\d$/.test(matchId)) return ["SFW1", "SFW2"];
-        if (/^S-B\d$/.test(matchId)) return ["SBW1", "SBW2"];
+        if (/^S-F1-\d+$/.test(matchId)) return ["SFW1", "SFW2"];
+        if (/^S-B\d+(?:-\d+)?$/.test(matchId)) return ["SBW1", "SBW2"];
         return null;
     }
 
@@ -1351,8 +1351,8 @@ function defaultParticipantsFor(eventId, matchId) {
     if (isBadmintonDouble) {
         const sf = matchId.match(/^D-SF([12])-\d$/);
         if (sf) return sf[1] === "1" ? ["D1", "D4"] : ["D2", "D3"];
-        if (/^D-F\d$/.test(matchId)) return ["DFW1", "DFW2"];
-        if (/^D-B\d$/.test(matchId)) return ["DBW1", "DBW2"];
+        if (/^D-F1-\d+$/.test(matchId)) return ["DFW1", "DFW2"];
+        if (/^D-B\d+(?:-\d+)?$/.test(matchId)) return ["DBW1", "DBW2"];
         return null;
     }
 

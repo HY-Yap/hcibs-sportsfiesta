@@ -138,7 +138,7 @@ function defaultDurationSeconds(match) {
             return 30 * 60;
         }
         if (type === "final") {
-            return 60 * 60;
+            return 20 * 60;
         }
         return 10 * 60
     }
