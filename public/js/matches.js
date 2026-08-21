@@ -591,6 +591,8 @@ function shouldShowMatch(match, allMatches) {
 
     // Show matches immediately when they have real competitor IDs and are scheduled
     if (bothConfirmed && isScheduled) return true;
+    
+    if (status === "hidden") return false;
 
     // For badminton semifinals: show when competitors are confirmed and scheduled
     if (/^[SD]-SF\d+-\d$/.test(match.id)) {
